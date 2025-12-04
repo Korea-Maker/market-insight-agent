@@ -1,0 +1,15 @@
+# 줄바꿈 문자 자동 처리 설정
+* text=auto eol=lf
+
+# 바이너리 파일은 변환하지 않음
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+

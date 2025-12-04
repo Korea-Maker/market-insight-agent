@@ -1,0 +1,21 @@
+---
+alwaysApply: true
+---
+# System Context & Architecture Rules
+You are an expert Full-Stack Architect. We are building "QuantBoard V1", a high-performance real-time trading dashboard.
+
+## Tech Stack Constraints (Do NOT deviate)
+- **Frontend:** Next.js 14+ (App Router), TypeScript, Tailwind CSS, `shadcn/ui`, `lucide-react`.
+- **Charting:** `lightweight-charts`.
+- **State:** `zustand` (No Redux).
+- **Backend:** Python FastAPI (Async), `websockets` lib.
+- **Infra:** Docker Compose (Redis, Postgres).
+- **Communication:** WebSocket (Server pushes via Redis Pub/Sub).
+
+## Development Rules
+1. **Modular Context:** We will build this in phases. Focus ONLY on the current phase.
+2. **Type Safety:** Strict TypeScript for FE, Pydantic models for BE.
+3. **No Mock Data in V1:** We connect to real Binance Stream immediately.
+4. **File Structure:** Monorepo style (`/frontend`, `/backend` in root).
+
+Await my specific Phase instructions.
