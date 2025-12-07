@@ -1,19 +1,66 @@
 "use client";
 
-import { useEffect, useRef } from 'react';
-import { createChart, ColorType, IChartApi, ISeriesApi, Time, AreaSeries } from 'lightweight-charts';
+import { useEffect, useRef, useState } from 'react';
+import { createChart, ColorType, IChartApi, ISeriesApi, Time, CandlestickSeries, HistogramSeries, LineSeries } from 'lightweight-charts';
 import { usePriceStore } from '@/store/usePriceStore';
+import { OHLCData } from '@/types/price';
+
+interface CandleData {
+  time: Time;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+}
+
+interface VolumeData {
+  time: Time;
+  value: number;
+  color: string;
+}
+
+interface MAData {
+  time: Time;
+  value: number;
+}
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 export const CryptoChart = () => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
-  const seriesRef = useRef<ISeriesApi<"Area"> | null>(null);
-  const lastTimeRef = useRef<number>(0);
+  const candlestickSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
+  const volumeSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
+  const ma20SeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
+  const ma50SeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
+  
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  // 현재 캔들 추적 (실시간 업데이트용)
+  const currentCandleRef = useRef<CandleData | null>(null);
+  const currentCandleTimeRef = useRef<number>(0);
 
+  // 이동평균 계산 함수
+  const calculateMA = (data: CandleData[], period: number): MAData[] => {
+    if (data.length < period) return [];
+    
+    const ma: MAData[] = [];
+    for (let i = period - 1; i < data.length; i++) {
+      const sum = data.slice(i - period + 1, i + 1).reduce((acc, candle) => acc + candle.close, 0);
+      ma.push({
+        time: data[i].time,
+        value: sum / period,
+      });
+    }
+    return ma;
+  };
+
+  // 차트 초기화 및 데이터 로드
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
-    // 1. Initialize Chart
+    // 차트 생성
     const chart = createChart(chartContainerRef.current, {
       layout: {
         background: { type: ColorType.Solid, color: 'transparent' },
@@ -23,90 +70,268 @@ export const CryptoChart = () => {
         vertLines: { color: 'rgba(42, 46, 57, 0.1)' },
         horzLines: { color: 'rgba(42, 46, 57, 0.1)' },
       },
-      // Initial dimensions (will be updated by ResizeObserver)
       width: chartContainerRef.current.clientWidth,
-      height: chartContainerRef.current.clientHeight || 400,
+      height: chartContainerRef.current.clientHeight || 500,
       timeScale: {
         timeVisible: true,
-        secondsVisible: true,
+        secondsVisible: false,
+        borderColor: 'rgba(42, 46, 57, 0.5)',
+      },
+      rightPriceScale: {
+        borderColor: 'rgba(42, 46, 57, 0.5)',
       },
     });
 
     chartRef.current = chart;
 
-    // 2. Add Series (v5 API)
-    const newSeries = chart.addSeries(AreaSeries, {
-      lineColor: '#2962FF',
-      topColor: '#2962FF',
-      bottomColor: 'rgba(41, 98, 255, 0.28)',
+    // 캔들스틱 시리즈 추가 (v5 API)
+    const candlestickSeries = chart.addSeries(CandlestickSeries, {
+      upColor: '#26a69a',
+      downColor: '#ef5350',
+      borderVisible: false,
+      wickUpColor: '#26a69a',
+      wickDownColor: '#ef5350',
     });
-    seriesRef.current = newSeries;
+    candlestickSeriesRef.current = candlestickSeries;
 
-    // 3. Set Initial Data
-    const { priceHistory } = usePriceStore.getState();
-    const sortedHistory = [...priceHistory].sort((a, b) => a.timestamp - b.timestamp);
-    
-    // Process data to ensure unique seconds
-    const dataMap = new Map<number, number>();
-    sortedHistory.forEach(trade => {
-        const time = Math.floor(trade.timestamp / 1000);
-        dataMap.set(time, trade.price);
+    // 거래량 히스토그램 추가 (별도 패널)
+    const volumeSeries = chart.addSeries(HistogramSeries, {
+      color: '#26a69a',
+      priceFormat: {
+        type: 'volume',
+      },
+      priceScaleId: 'volume',
     });
-    
-    const initialData = Array.from(dataMap.entries()).map(([time, value]) => ({
-        time: time as Time,
-        value,
-    })).sort((a, b) => (a.time as number) - (b.time as number));
+    volumeSeriesRef.current = volumeSeries;
 
-    if (initialData.length > 0) {
-        newSeries.setData(initialData);
-        lastTimeRef.current = initialData[initialData.length - 1].time as number;
-        chart.timeScale().fitContent();
+    // 이동평균선 추가
+    const ma20Series = chart.addSeries(LineSeries, {
+      color: '#2962FF',
+      lineWidth: 2,
+      title: 'MA20',
+      priceLineVisible: false,
+      lastValueVisible: true,
+    });
+    ma20SeriesRef.current = ma20Series;
+
+    const ma50Series = chart.addSeries(LineSeries, {
+      color: '#FF6D00',
+      lineWidth: 2,
+      title: 'MA50',
+      priceLineVisible: false,
+      lastValueVisible: true,
+    });
+    ma50SeriesRef.current = ma50Series;
+
+    // 거래량 스케일 설정
+    chart.priceScale('volume').applyOptions({
+      scaleMargins: {
+        top: 0.8,
+        bottom: 0,
+      },
+    });
+
+    // ResizeObserver 설정
+    const container = chartContainerRef.current;
+    if (!container) {
+      return () => {
+        chart.remove();
+      };
     }
 
-    // 4. Handle Resize with ResizeObserver
     const resizeObserver = new ResizeObserver((entries) => {
-        if (!entries || entries.length === 0 || !chartRef.current) return;
-        const { width, height } = entries[0].contentRect;
-        chartRef.current.applyOptions({ width, height });
+      if (!entries || entries.length === 0 || !chartRef.current) return;
+      const { width, height } = entries[0].contentRect;
+      chartRef.current.applyOptions({ width, height });
     });
-    resizeObserver.observe(chartContainerRef.current);
+    
+    resizeObserver.observe(container);
 
-    // 5. Cleanup
+    // 차트 초기화 후 과거 데이터 로드
+    const loadInitialData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        console.log('[CryptoChart] API 호출 시작:', `${API_BASE_URL}/api/candles?symbol=BTCUSDT&interval=1m&limit=500`);
+
+        const response = await fetch(
+          `${API_BASE_URL}/api/candles?symbol=BTCUSDT&interval=1m&limit=500`,
+          {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+
+        console.log('[CryptoChart] API 응답 상태:', response.status, response.statusText);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('[CryptoChart] API 오류 응답:', errorText);
+          throw new Error(`API 요청 실패: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        console.log('[CryptoChart] API 데이터 수신:', data);
+
+        if (!data.candles || !Array.isArray(data.candles)) {
+          throw new Error('잘못된 데이터 형식: candles 배열이 없습니다');
+        }
+
+        const candles: CandleData[] = data.candles.map((candle: OHLCData) => ({
+          time: candle.time as Time,
+          open: candle.open,
+          high: candle.high,
+          low: candle.low,
+          close: candle.close,
+        }));
+
+        if (candles.length === 0) {
+          throw new Error('캔들 데이터가 없습니다');
+        }
+
+        console.log('[CryptoChart] 캔들 데이터 변환 완료:', candles.length, '개');
+
+        // 현재 캔들 설정
+        const lastCandle = candles[candles.length - 1];
+        currentCandleRef.current = { ...lastCandle };
+        currentCandleTimeRef.current = lastCandle.time as number;
+
+        // 데이터 설정
+        console.log('[CryptoChart] 차트에 데이터 설정 중...');
+        candlestickSeries.setData(candles);
+        console.log('[CryptoChart] 캔들스틱 데이터 설정 완료');
+
+        const volumeData: VolumeData[] = data.candles.map((candle: OHLCData) => ({
+          time: candle.time as Time,
+          value: candle.volume,
+          color: candle.close >= candle.open ? 'rgba(0, 150, 136, 0.5)' : 'rgba(255, 82, 82, 0.5)',
+        }));
+        volumeSeries.setData(volumeData);
+        console.log('[CryptoChart] 거래량 데이터 설정 완료');
+
+        const ma20 = calculateMA(candles, 20);
+        const ma50 = calculateMA(candles, 50);
+        if (ma20.length > 0) {
+          ma20Series.setData(ma20);
+          console.log('[CryptoChart] MA20 데이터 설정 완료:', ma20.length, '개');
+        }
+        if (ma50.length > 0) {
+          ma50Series.setData(ma50);
+          console.log('[CryptoChart] MA50 데이터 설정 완료:', ma50.length, '개');
+        }
+
+        chart.timeScale().fitContent();
+        console.log('[CryptoChart] 차트 초기화 완료');
+        setLoading(false);
+      } catch (err) {
+        console.error('[CryptoChart] 캔들 데이터 로드 실패:', err);
+        const errorMessage = err instanceof Error ? err.message : '알 수 없는 오류';
+        console.error('[CryptoChart] 에러 상세:', {
+          message: errorMessage,
+          stack: err instanceof Error ? err.stack : undefined,
+        });
+        setError(errorMessage);
+        setLoading(false);
+      }
+    };
+
+    // 약간의 지연을 두고 데이터 로드 (차트가 완전히 렌더링된 후)
+    const timer = setTimeout(() => {
+      loadInitialData();
+    }, 100);
+
+    // Cleanup
     return () => {
+      clearTimeout(timer);
       resizeObserver.disconnect();
       chart.remove();
     };
   }, []);
 
-  // 6. Subscribe to Store Updates
+  // 실시간 가격 업데이트로 현재 캔들 갱신
   useEffect(() => {
     const unsubscribe = usePriceStore.subscribe((state) => {
-      const series = seriesRef.current;
-      if (!series) return;
-
       const lastTrade = state.priceHistory[state.priceHistory.length - 1];
-      if (!lastTrade) return;
+      if (!lastTrade || !candlestickSeriesRef.current) return;
 
-      const time = Math.floor(lastTrade.timestamp / 1000);
+      const tradeTime = Math.floor(lastTrade.timestamp / 1000);
+      const currentCandleTime = currentCandleTimeRef.current;
       
-      // Safety check: ensure time is not backward
-      if (time < lastTimeRef.current) return;
+      // 새로운 캔들 시작 여부 확인 (1분 간격 기준)
+      const isNewCandle = tradeTime >= currentCandleTime + 60;
 
-      series.update({
-        time: time as Time,
-        value: lastTrade.price,
-      });
-      
-      lastTimeRef.current = time;
+      if (isNewCandle) {
+        // 새로운 캔들 생성
+        if (currentCandleRef.current) {
+          // 이전 캔들 확정 (이미 추가되어 있으므로 업데이트만)
+          const newCandle: CandleData = {
+            time: tradeTime as Time,
+            open: lastTrade.price,
+            high: lastTrade.price,
+            low: lastTrade.price,
+            close: lastTrade.price,
+          };
+          
+          candlestickSeriesRef.current.update(newCandle);
+          currentCandleRef.current = newCandle;
+          currentCandleTimeRef.current = tradeTime;
+        }
+      } else {
+        // 현재 캔들 업데이트 (High/Low/Close)
+        if (currentCandleRef.current) {
+          const updatedCandle: CandleData = {
+            ...currentCandleRef.current,
+            high: Math.max(currentCandleRef.current.high, lastTrade.price),
+            low: Math.min(currentCandleRef.current.low, lastTrade.price),
+            close: lastTrade.price,
+          };
+          
+          candlestickSeriesRef.current.update(updatedCandle);
+          currentCandleRef.current = updatedCandle;
+        }
+      }
     });
 
     return () => unsubscribe();
   }, []);
 
   return (
-    <div className="w-full h-full min-h-[500px] p-4 bg-card rounded-xl border shadow-sm flex flex-col">
-      <div className="flex-1 w-full min-h-[450px]" ref={chartContainerRef} />
+    <div className="w-full h-full min-h-[500px] p-4 bg-card rounded-xl border shadow-sm flex flex-col relative">
+      {loading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10 rounded-xl">
+          <div className="flex flex-col items-center gap-2">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <div className="text-sm text-muted-foreground">캔들 데이터 로딩 중...</div>
+            <div className="text-xs text-muted-foreground/60">{API_BASE_URL}/api/candles</div>
+          </div>
+        </div>
+      )}
+      {error && (
+        <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10 rounded-xl">
+          <div className="flex flex-col items-center gap-2 max-w-md text-center">
+            <div className="text-sm font-semibold text-destructive">오류 발생</div>
+            <div className="text-xs text-destructive/80">{error}</div>
+            <div className="text-xs text-muted-foreground mt-2">
+              API URL: {API_BASE_URL}/api/candles
+            </div>
+            <button
+              onClick={() => {
+                setError(null);
+                setLoading(true);
+                // 페이지 새로고침으로 재시도
+                window.location.reload();
+              }}
+              className="mt-2 px-4 py-2 text-xs bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+            >
+              다시 시도
+            </button>
+          </div>
+        </div>
+      )}
+      <div className="flex-1 w-full min-h-[500px]" ref={chartContainerRef} />
     </div>
   );
 };

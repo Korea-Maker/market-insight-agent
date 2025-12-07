@@ -43,8 +43,8 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   const shouldReconnectRef = useRef(reconnect);
   const isManualCloseRef = useRef(false);
 
-  const updatePrice = usePriceStore((state) => state.updatePrice);
-  const setStatus = usePriceStore((state) => state.setStatus);
+  // Use getState() to access store functions directly
+  // This prevents infinite loops by avoiding reactive selectors in dependency arrays
 
   /**
    * Connect to WebSocket server
@@ -57,7 +57,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     }
 
     try {
-      setStatus('connecting');
+      usePriceStore.getState().setStatus('connecting');
       console.log('[WebSocket] Connecting to:', url);
 
       const ws = new WebSocket(url);
@@ -66,7 +66,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
       // Connection opened
       ws.onopen = () => {
         console.log('[WebSocket] Connected successfully');
-        setStatus('connected');
+        usePriceStore.getState().setStatus('connected');
         reconnectAttemptsRef.current = 0; // Reset reconnect attempts on successful connection
       };
 
@@ -77,7 +77,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
           
           // Validate data structure
           if (data && typeof data.price === 'number' && data.symbol) {
-            updatePrice(data);
+            usePriceStore.getState().updatePrice(data);
           } else {
             console.warn('[WebSocket] Invalid data format:', data);
           }
@@ -129,7 +129,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
           });
         }
 
-        setStatus('disconnected');
+        usePriceStore.getState().setStatus('disconnected');
 
         // Attempt reconnect if not manually closed
         if (shouldReconnectRef.current && !isManualCloseRef.current) {
@@ -154,18 +154,18 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
           message: 'WebSocket connection error. Check if backend server is running.',
           hint: 'Ensure FastAPI server is running on http://localhost:8000',
         });
-        setStatus('error');
+        usePriceStore.getState().setStatus('error');
       };
 
     } catch (error) {
       console.error('[WebSocket] Connection error:', error);
-      setStatus('error');
+      usePriceStore.getState().setStatus('error');
       
       if (shouldReconnectRef.current && !isManualCloseRef.current) {
         attemptReconnect();
       }
     }
-  }, [url, updatePrice, setStatus]);
+  }, [url]);
 
   /**
    * Attempt to reconnect with exponential backoff
@@ -174,7 +174,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     // Check max attempts
     if (reconnectAttemptsRef.current >= maxReconnectAttempts) {
       console.error('[WebSocket] Max reconnect attempts reached');
-      setStatus('error');
+      usePriceStore.getState().setStatus('error');
       return;
     }
 
@@ -193,7 +193,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     reconnectTimeoutRef.current = setTimeout(() => {
       connect();
     }, delay);
-  }, [connect, reconnectInterval, maxReconnectAttempts, setStatus]);
+  }, [connect, reconnectInterval, maxReconnectAttempts]);
 
   /**
    * Disconnect from WebSocket server
@@ -214,9 +214,9 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
       wsRef.current = null;
     }
 
-    setStatus('disconnected');
+    usePriceStore.getState().setStatus('disconnected');
     console.log('[WebSocket] Manually disconnected');
-  }, [setStatus]);
+  }, []);
 
   // Connect on mount
   useEffect(() => {

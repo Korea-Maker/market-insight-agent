@@ -11,7 +11,7 @@ from contextlib import asynccontextmanager
 from app.core.config import settings
 from app.core.redis import close_redis_connections
 from app.services.ingestor import run_ingestor
-from app.routers import ws
+from app.routers import ws, candles
 
 # 로깅 설정
 logging.basicConfig(
@@ -69,7 +69,8 @@ app.add_middleware(
 )
 
 # 라우터 등록
-app.include_router(ws.router, tags=["WebSocket"])
+app.include_router(ws.router)
+app.include_router(candles.router)
 
 
 @app.get("/health")
