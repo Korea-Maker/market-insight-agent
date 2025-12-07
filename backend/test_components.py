@@ -34,8 +34,11 @@ async def test_redis_connection() -> bool:
     
     except Exception as e:
         logger.error(f"❌ Redis 연결 실패: {e}")
-        logger.info("💡 해결 방법: Docker Compose로 Redis를 시작하세요")
-        logger.info("   docker-compose up -d redis")
+        logger.info("💡 해결 방법:")
+        logger.info("   1. 로컬 Redis 서버가 실행 중인지 확인하세요")
+        logger.info("   2. Windows: Memurai 또는 WSL2의 Redis 사용")
+        logger.info("   3. Linux/Mac: sudo systemctl start redis-server")
+        logger.info("   4. redis-cli ping 으로 연결 테스트")
         return False
 
 
