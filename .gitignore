@@ -58,3 +58,9 @@ docker-compose.override.yml
 *.tmp
 *.temp
 deep_research.pdf
+
+# Assets (may contain sensitive paths)
+assets/
+
+#certificate
+*.pem

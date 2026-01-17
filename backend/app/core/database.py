@@ -1,8 +1,10 @@
 """
 데이터베이스 연결 및 세션 관리
 SQLAlchemy 2.0 비동기 패턴 사용
+SQLite (기본) 또는 PostgreSQL 지원
 """
 import logging
+import os
 from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import (
     create_async_engine,
@@ -18,20 +20,39 @@ logger = logging.getLogger(__name__)
 # SQLAlchemy Base 클래스
 Base = declarative_base()
 
-# 데이터베이스 URL 구성
-DATABASE_URL = (
-    f"postgresql+asyncpg://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}"
-    f"@{settings.POSTGRES_HOST}:{settings.POSTGRES_PORT}/{settings.POSTGRES_DB}"
-)
+# 데이터베이스 URL 구성 (SQLite 기본, PostgreSQL 선택적)
+def get_database_url() -> str:
+    """환경에 따른 데이터베이스 URL 반환"""
+    db_type = os.getenv("DB_TYPE", "sqlite").lower()
 
-# 비동기 엔진 생성
-engine = create_async_engine(
-    DATABASE_URL,
-    echo=settings.ENVIRONMENT == "development",  # 개발 환경에서 SQL 로깅
-    pool_pre_ping=True,  # 연결 확인
-    pool_size=10,
-    max_overflow=20,
-)
+    if db_type == "postgresql":
+        return (
+            f"postgresql+asyncpg://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}"
+            f"@{settings.POSTGRES_HOST}:{settings.POSTGRES_PORT}/{settings.POSTGRES_DB}"
+        )
+    else:
+        # SQLite 기본 (backend/data/quantboard.db)
+        db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data", "quantboard.db")
+        os.makedirs(os.path.dirname(db_path), exist_ok=True)
+        return f"sqlite+aiosqlite:///{db_path}"
+
+DATABASE_URL = get_database_url()
+logger.info(f"Using database: {DATABASE_URL.split('://')[0]}")
+
+# 비동기 엔진 생성 (SQLite와 PostgreSQL 모두 지원)
+engine_kwargs = {
+    "echo": settings.ENVIRONMENT == "development",
+}
+
+# PostgreSQL 전용 옵션
+if DATABASE_URL.startswith("postgresql"):
+    engine_kwargs.update({
+        "pool_pre_ping": True,
+        "pool_size": 10,
+        "max_overflow": 20,
+    })
+
+engine = create_async_engine(DATABASE_URL, **engine_kwargs)
 
 # 비동기 세션 팩토리
 AsyncSessionLocal = async_sessionmaker(

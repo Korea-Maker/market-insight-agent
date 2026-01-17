@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { LayoutDashboard, Newspaper, Users, BrainCircuit } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ThemeToggle } from '@/components/Theme/ThemeToggle';
 
 interface NavItem {
   title: string;
@@ -73,11 +74,13 @@ export const SidebarNav = () => {
         })}
       </nav>
 
-      {/* Footer */}
-      <div className="p-4 border-t border-border">
+      {/* Theme Toggle & Footer */}
+      <div className="p-4 border-t border-border space-y-4">
+        <div className="flex items-center justify-center">
+          <ThemeToggle />
+        </div>
         <div className="text-xs text-muted-foreground text-center">
-          <p>Phase 4-A</p>
-          <p className="mt-1">UI 구조 개편</p>
+          <p className="font-medium">QuantBoard V1</p>
         </div>
       </div>
     </aside>

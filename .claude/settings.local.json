@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(timeout:*)",
+      "Bash(git fetch:*)",
+      "Bash(docker ps:*)",
+      "Bash(curl:*)",
+      "Bash(python main.py:*)",
+      "Bash(npm run dev:*)",
+      "Bash(python -m json.tool:*)",
+      "Bash(./venv/Scripts/python:*)",
+      "Bash(pip show:*)",
+      "Bash(source:*)",
+      "Bash(git add:*)"
+    ]
+  },
+  "spinnerTipsEnabled": true
+}

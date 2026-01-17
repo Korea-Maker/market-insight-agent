@@ -1,178 +1,42 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { 
-  Newspaper, 
-  Clock, 
+import { Card, CardContent } from '@/components/ui/card';
+import {
+  Newspaper,
+  Clock,
   TrendingUp,
-  Calendar,
   Tag,
   ArrowRight,
   Sparkles,
   Filter,
-  Eye
+  RefreshCw,
+  ExternalLink,
+  AlertCircle,
+  Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 type FilterType = 'all' | 'market' | 'tech' | 'regulation';
 
 interface NewsItem {
-  id: string;
+  id: number;
   title: string;
-  summary: string;
-  content: string;
-  author: string;
-  publishedAt: string;
-  category: string;
-  tags: string[];
-  image?: string;
+  title_kr: string | null;
+  link: string;
+  published: string | null;
   source: string;
-  views: number;
-  isBreaking?: boolean;
+  description: string | null;
+  created_at: string;
 }
 
-const mockNews: NewsItem[] = [
-  {
-    id: '1',
-    title: '비트코인, 주요 저항선 돌파하며 3개월 만에 최고가 기록',
-    summary: '비트코인이 65,000달러 저항선을 돌파하며 3개월 만에 최고가를 기록했습니다. 기술적 지표와 기관 투자자들의 유입이 가격 상승을 이끌고 있습니다.',
-    content: `비트코인이 주요 저항선인 65,000달러를 돌파하며 3개월 만에 최고가를 기록했습니다. 
-
-이번 상승은 여러 요인이 복합적으로 작용한 결과입니다. 먼저, 기술적 지표를 살펴보면 RSI(상대강도지수)가 70을 넘어서면서 강세 신호를 보이고 있으며, MACD 지표도 골든크로스를 형성하며 상승 모멘텀이 강화되고 있습니다.
-
-또한 기관 투자자들의 지속적인 유입이 가격 상승을 뒷받침하고 있습니다. 최근 공개된 데이터에 따르면, 주요 기관들이 비트코인 ETF를 통해 대규모 매수를 진행하고 있으며, 이는 시장의 신뢰도가 높아지고 있음을 시사합니다.
-
-시장 전문가들은 이번 상승이 단순한 기술적 반등이 아닌, 근본적인 시장 구조 변화의 신호일 수 있다고 분석하고 있습니다. 특히, 인플레이션 우려와 전통 금융 시스템에 대한 불신이 증가하면서 비트코인을 대체 자산으로 보는 시각이 확산되고 있습니다.
-
-앞으로의 전망에 대해서는 신중한 접근이 필요합니다. 현재 가격 수준이 과열되었을 가능성도 배제할 수 없으며, 단기 조정이 발생할 수 있습니다. 투자자들은 리스크 관리에 주의를 기울여야 할 것입니다.`,
-    author: '시장 분석팀',
-    publishedAt: '2025-12-07T10:30:00Z',
-    category: 'market',
-    tags: ['BTC', '시장동향', '가격분석'],
-    source: 'CryptoNews',
-    views: 1234,
-    isBreaking: true,
-  },
-  {
-    id: '2',
-    title: '이더리움, Dencun 업그레이드로 가스비 90% 절감 효과 확인',
-    summary: '이더리움의 최신 Dencun 업그레이드가 성공적으로 완료되었으며, L2 네트워크의 가스비가 평균 90% 감소한 것으로 확인되었습니다.',
-    content: `이더리움의 Dencun 업그레이드가 성공적으로 완료되면서 L2 네트워크의 가스비가 대폭 감소했습니다.
-
-이번 업그레이드의 핵심은 EIP-4844(Proto-Danksharding)의 도입으로, 블롭(blob) 트랜잭션을 통해 L2 네트워크의 데이터 저장 비용을 크게 낮췄습니다. 
-
-주요 L2 네트워크들의 가스비 변화를 살펴보면:
-- Arbitrum: 평균 가스비 95% 감소
-- Optimism: 평균 가스비 88% 감소  
-- Polygon zkEVM: 평균 가스비 92% 감소
-
-이러한 변화는 이더리움 생태계의 확장성 문제를 해결하는 중요한 이정표가 되었습니다. 사용자들은 이제 훨씬 저렴한 비용으로 DeFi 거래와 NFT 거래를 수행할 수 있게 되었습니다.
-
-개발자 커뮤니티는 이번 업그레이드를 매우 긍정적으로 평가하고 있으며, 앞으로 더 많은 애플리케이션이 이더리움 생태계로 유입될 것으로 예상됩니다.`,
-    author: '기술 분석팀',
-    publishedAt: '2025-12-07T09:15:00Z',
-    category: 'tech',
-    tags: ['ETH', '업그레이드', 'L2'],
-    source: 'TechReview',
-    views: 892,
-  },
-  {
-    id: '3',
-    title: '미국 SEC, 새로운 암호화폐 규제 가이드라인 발표 예정',
-    summary: '미국 증권거래위원회(SEC)가 내년 1분기 중 새로운 암호화폐 규제 가이드라인을 발표할 예정이라고 발표했습니다.',
-    content: `미국 증권거래위원회(SEC)가 내년 1분기 중 새로운 암호화폐 규제 가이드라인을 발표할 예정입니다.
-
-이번 가이드라인은 주로 다음과 같은 영역을 다룰 것으로 예상됩니다:
-- 스테이블코인 발행 및 운영 기준
-- DeFi 프로토콜에 대한 규제 프레임워크
-- 암호화폐 거래소의 자금 보관 및 분리 기준
-- 투자자 보호를 위한 정보 공시 요건
-
-업계 전문가들은 이번 규제가 시장의 명확성을 높이고 기관 투자자들의 참여를 촉진할 것으로 기대하고 있습니다. 반면, 일부에서는 과도한 규제가 혁신을 저해할 수 있다는 우려도 제기하고 있습니다.
-
-암호화폐 관련 기업들은 이번 가이드라인 발표를 앞두고 자체 규정 준수 체계를 점검하고 있으며, 규제에 대응할 수 있는 준비를 하고 있습니다.`,
-    author: '정책 분석팀',
-    publishedAt: '2025-12-07T08:00:00Z',
-    category: 'regulation',
-    tags: ['규제', 'SEC', '정책'],
-    source: 'PolicyWatch',
-    views: 567,
-  },
-  {
-    id: '4',
-    title: '바이낸스, 새로운 AI 기반 거래 봇 출시',
-    summary: '바이낸스가 머신러닝 기술을 활용한 새로운 AI 거래 봇을 출시했습니다. 이 봇은 시장 패턴을 분석하여 최적의 거래 타이밍을 제안합니다.',
-    content: `바이낸스가 최신 AI 기술을 활용한 거래 봇을 출시했습니다.
-
-이번에 출시된 AI 거래 봇은 다음과 같은 기능을 제공합니다:
-- 실시간 시장 패턴 분석
-- 감정 분석을 통한 시장 전망
-- 개인화된 거래 전략 제안
-- 리스크 관리 자동화
-
-봇은 딥러닝 모델을 사용하여 과거 시장 데이터와 뉴스, 소셜 미디어 감정을 종합적으로 분석합니다. 이를 통해 더 정확한 시장 예측과 거래 신호를 제공할 수 있게 되었습니다.
-
-초기 테스트 결과, 봇이 제안한 거래 전략의 수익률이 평균적으로 15% 향상된 것으로 나타났습니다. 다만, 모든 투자에는 리스크가 따르므로 신중한 판단이 필요합니다.`,
-    author: '제품 리뷰팀',
-    publishedAt: '2025-12-06T16:45:00Z',
-    category: 'tech',
-    tags: ['AI', '거래봇', '바이낸스'],
-    source: 'ProductNews',
-    views: 445,
-  },
-  {
-    id: '5',
-    title: '솔라나, 24시간 거래량 20억 달러 돌파',
-    summary: '솔라나 네트워크의 24시간 거래량이 사상 최초로 20억 달러를 돌파했습니다. DeFi 생태계의 급속한 성장이 주된 원인입니다.',
-    content: `솔라나 네트워크의 24시간 거래량이 사상 최초로 20억 달러를 돌파했습니다.
-
-이번 기록은 솔라나 생태계의 급속한 성장을 보여주는 중요한 이정표입니다. 주요 성장 요인은 다음과 같습니다:
-
-1. DeFi 프로토콜의 확장
-   - Jupiter, Raydium 등 주요 DEX의 거래량 급증
-   - 새로운 유동성 풀의 지속적인 추가
-
-2. NFT 시장의 활성화
-   - Magic Eden, Tensor 등 NFT 마켓플레이스의 거래량 증가
-   - 새로운 NFT 컬렉션의 성공적인 런칭
-
-3. 기관 투자자들의 관심 증가
-   - 대형 기관들의 솔라나 기반 프로젝트 투자
-   - 인프라 개선에 대한 지속적인 투자
-
-솔라나 재단은 이번 성과에 대해 네트워크의 확장성과 낮은 거래 수수료가 핵심 요인이라고 분석했습니다. 앞으로도 생태계 확장을 위한 다양한 인센티브 프로그램을 운영할 예정입니다.`,
-    author: '생태계 분석팀',
-    publishedAt: '2025-12-06T14:20:00Z',
-    category: 'market',
-    tags: ['SOL', 'DeFi', '거래량'],
-    source: 'EcosystemReport',
-    views: 678,
-  },
-  {
-    id: '6',
-    title: '유럽연합, MiCA 규정 완전 시행 개시',
-    summary: '유럽연합의 암호화폐 시장 규제법(MiCA)이 완전히 시행되기 시작했습니다. 유럽 내 암호화폐 기업들은 새로운 규정에 맞춰 운영 방식을 조정해야 합니다.',
-    content: `유럽연합의 암호화폐 시장 규제법(MiCA)이 완전히 시행되기 시작했습니다.
-
-MiCA 규정의 주요 내용:
-- 암호화폐 자산 서비스 제공자(CASP)에 대한 라이선스 요건
-- 스테이블코인 발행자에 대한 엄격한 준비금 요구사항
-- 투자자 보호를 위한 정보 공시 의무
-- 시장 조작 방지를 위한 감시 체계
-
-유럽 내 암호화폐 기업들은 이제 새로운 규정에 맞춰 운영 방식을 조정해야 합니다. 많은 기업들이 이미 규정 준수를 위한 준비를 완료했으며, 일부는 추가 조정이 필요한 상황입니다.
-
-전문가들은 이번 규정이 유럽 시장의 명확성을 높이고 장기적으로 시장 성장에 도움이 될 것으로 평가하고 있습니다. 다만, 규정 준수 비용이 중소기업들에게는 부담이 될 수 있다는 우려도 있습니다.`,
-    author: '정책 분석팀',
-    publishedAt: '2025-12-06T11:30:00Z',
-    category: 'regulation',
-    tags: ['MiCA', '유럽', '규제'],
-    source: 'PolicyWatch',
-    views: 523,
-  },
-];
+interface NewsResponse {
+  total: number;
+  items: NewsItem[];
+}
 
 const categories = [
   { id: 'all', label: '전체', icon: Newspaper },
@@ -181,15 +45,60 @@ const categories = [
   { id: 'regulation', label: '규제', icon: Filter },
 ];
 
+// 소스별 색상 매핑
+const sourceColors: Record<string, string> = {
+  'CoinDesk': 'from-blue-500 to-cyan-500',
+  'CoinTelegraph': 'from-orange-500 to-yellow-500',
+  'Bitcoin Magazine': 'from-amber-500 to-orange-500',
+  'default': 'from-purple-500 to-pink-500',
+};
+
 export default function NewsPage() {
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
+  const [news, setNews] = useState<NewsItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const getFilteredNews = () => {
-    if (activeFilter === 'all') return mockNews;
-    return mockNews.filter(news => news.category === activeFilter);
-  };
+  // 뉴스 데이터 가져오기
+  const fetchNews = useCallback(async (isRefresh = false) => {
+    try {
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      setError(null);
 
-  const formatDate = (dateString: string) => {
+      const response = await fetch(`${API_BASE_URL}/api/news/?limit=50`);
+
+      if (!response.ok) {
+        throw new Error(`API 요청 실패: ${response.status}`);
+      }
+
+      const data: NewsResponse = await response.json();
+      setNews(data.items);
+    } catch (err) {
+      console.error('뉴스 로드 실패:', err);
+      setError(err instanceof Error ? err.message : '뉴스를 불러오는데 실패했습니다');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchNews();
+
+    // 30초마다 자동 새로고침
+    const interval = setInterval(() => fetchNews(true), 30000);
+    return () => clearInterval(interval);
+  }, [fetchNews]);
+
+  // 날짜 포맷팅
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return '날짜 없음';
+
     const date = new Date(dateString);
     const now = new Date();
     const diff = now.getTime() - date.getTime();
@@ -197,26 +106,74 @@ export default function NewsPage() {
     const hours = Math.floor(diff / 3600000);
     const days = Math.floor(diff / 86400000);
 
+    if (minutes < 1) return '방금 전';
     if (minutes < 60) return `${minutes}분 전`;
     if (hours < 24) return `${hours}시간 전`;
     if (days < 7) return `${days}일 전`;
-    return date.toLocaleDateString('ko-KR');
+    return date.toLocaleDateString('ko-KR', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  // 제목에서 카테고리 추론 (간단한 키워드 기반)
+  const inferCategory = (title: string, description: string | null): string => {
+    const text = `${title} ${description || ''}`.toLowerCase();
+
+    if (text.includes('sec') || text.includes('regulation') || text.includes('law') ||
+        text.includes('규제') || text.includes('법') || text.includes('정책')) {
+      return 'regulation';
+    }
+    if (text.includes('upgrade') || text.includes('update') || text.includes('protocol') ||
+        text.includes('기술') || text.includes('업그레이드') || text.includes('개발')) {
+      return 'tech';
+    }
+    return 'market';
+  };
+
+  // 필터링된 뉴스
+  const filteredNews = news.filter(item => {
+    if (activeFilter === 'all') return true;
+    return inferCategory(item.title, item.description) === activeFilter;
+  });
+
+  // 소스별 그라디언트 색상 가져오기
+  const getSourceGradient = (source: string) => {
+    return sourceColors[source] || sourceColors.default;
   };
 
   return (
-    <div className="flex flex-col h-full p-6 gap-6 overflow-y-auto">
+    <div className="flex flex-col h-full p-6 gap-6 overflow-y-auto bg-gradient-to-br from-background via-background to-muted/20">
       {/* Header */}
-      <header className="space-y-4">
+      <header className="space-y-6">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-              <Newspaper className="h-7 w-7 text-primary" />
+          <div className="space-y-1">
+            <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/10">
+                <Newspaper className="h-7 w-7 text-primary" />
+              </div>
               뉴스
             </h1>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-muted-foreground">
               실시간 암호화폐 시장 뉴스와 분석
             </p>
           </div>
+
+          {/* 새로고침 버튼 */}
+          <button
+            onClick={() => fetchNews(true)}
+            disabled={refreshing}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2 rounded-xl",
+              "bg-primary/10 hover:bg-primary/20 text-primary",
+              "transition-all duration-200 border border-primary/20",
+              "disabled:opacity-50 disabled:cursor-not-allowed"
+            )}
+          >
+            <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
+            <span className="text-sm font-medium">새로고침</span>
+          </button>
         </div>
 
         {/* Category Filters */}
@@ -228,11 +185,11 @@ export default function NewsPage() {
                 key={category.id}
                 onClick={() => setActiveFilter(category.id as FilterType)}
                 className={cn(
-                  "px-4 py-2 rounded-lg text-sm font-medium transition-all",
-                  "flex items-center gap-2",
+                  "px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200",
+                  "flex items-center gap-2 border",
                   activeFilter === category.id
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground hover:bg-accent border border-border"
+                    ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/25"
+                    : "bg-card/50 text-muted-foreground hover:text-foreground hover:bg-card border-border hover:border-primary/50"
                 )}
               >
                 <Icon className="h-4 w-4" />
@@ -240,86 +197,146 @@ export default function NewsPage() {
               </button>
             );
           })}
+
+          {/* 뉴스 개수 표시 */}
+          <div className="ml-auto text-sm text-muted-foreground">
+            {filteredNews.length}개의 뉴스
+          </div>
         </div>
       </header>
 
-      {/* News Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {getFilteredNews().map((news) => (
-          <Link key={news.id} href={`/news/${news.id}`}>
-            <Card className="h-full hover:shadow-lg transition-all duration-300 group cursor-pointer border-l-4 border-l-transparent hover:border-l-primary">
-              <CardContent className="p-0">
-                {/* Breaking News Badge */}
-                {news.isBreaking && (
-                  <div className="px-4 pt-4 pb-2">
-                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold bg-red-500 text-white">
-                      <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                      속보
-                    </span>
-                  </div>
-                )}
+      {/* Loading State */}
+      {loading && (
+        <div className="flex flex-col items-center justify-center py-20">
+          <Loader2 className="h-10 w-10 text-primary animate-spin mb-4" />
+          <p className="text-muted-foreground">뉴스를 불러오는 중...</p>
+        </div>
+      )}
 
-                <div className="p-6 space-y-4">
-                  {/* Header */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-1 rounded">
-                        {news.category === 'market' ? '시장' : 
-                         news.category === 'tech' ? '기술' : '규제'}
+      {/* Error State */}
+      {error && !loading && (
+        <div className="flex flex-col items-center justify-center py-20">
+          <div className="p-4 rounded-full bg-destructive/10 mb-4">
+            <AlertCircle className="h-10 w-10 text-destructive" />
+          </div>
+          <h3 className="text-lg font-semibold mb-2">오류가 발생했습니다</h3>
+          <p className="text-sm text-muted-foreground mb-4 max-w-md text-center">{error}</p>
+          <button
+            onClick={() => fetchNews()}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+          >
+            다시 시도
+          </button>
+        </div>
+      )}
+
+      {/* News Grid */}
+      {!loading && !error && (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {filteredNews.map((item, index) => {
+            const category = inferCategory(item.title, item.description);
+            const isRecent = item.published &&
+              (new Date().getTime() - new Date(item.published).getTime()) < 3600000; // 1시간 이내
+
+            return (
+              <a
+                key={item.id}
+                href={item.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group"
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                <Card className={cn(
+                  "h-full overflow-hidden transition-all duration-300",
+                  "hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1",
+                  "border-border/50 hover:border-primary/30",
+                  "bg-card/50 backdrop-blur-sm"
+                )}>
+                  {/* 상단 그라디언트 바 */}
+                  <div className={cn(
+                    "h-1 bg-gradient-to-r",
+                    getSourceGradient(item.source)
+                  )} />
+
+                  <CardContent className="p-5 space-y-4">
+                    {/* Header */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {/* 최신 뱃지 */}
+                        {isRecent && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-red-500/10 text-red-500 border border-red-500/20">
+                            <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
+                            NEW
+                          </span>
+                        )}
+
+                        {/* 카테고리 */}
+                        <span className={cn(
+                          "text-xs font-medium px-2.5 py-1 rounded-lg",
+                          category === 'market' && "bg-green-500/10 text-green-600 dark:text-green-400",
+                          category === 'tech' && "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+                          category === 'regulation' && "bg-orange-500/10 text-orange-600 dark:text-orange-400"
+                        )}>
+                          {category === 'market' ? '시장' : category === 'tech' ? '기술' : '규제'}
+                        </span>
+                      </div>
+
+                      {/* 소스 */}
+                      <span className="text-xs text-muted-foreground shrink-0">
+                        {item.source}
                       </span>
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Eye className="h-3 w-3" />
-                        <span>{news.views.toLocaleString()}</span>
+                    </div>
+
+                    {/* Title */}
+                    <div className="space-y-2">
+                      <h3 className="text-base font-semibold leading-snug line-clamp-2 group-hover:text-primary transition-colors">
+                        {item.title_kr || item.title}
+                      </h3>
+                      {item.title_kr && (
+                        <p className="text-xs text-muted-foreground line-clamp-1">
+                          {item.title}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Description */}
+                    {item.description && (
+                      <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
+                        {item.description}
+                      </p>
+                    )}
+
+                    {/* Footer */}
+                    <div className="flex items-center justify-between pt-3 border-t border-border/50">
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <Clock className="h-3.5 w-3.5" />
+                        <span>{formatDate(item.published)}</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-primary opacity-0 group-hover:opacity-100 transition-all">
+                        <span className="text-xs font-medium">읽기</span>
+                        <ExternalLink className="h-3.5 w-3.5" />
                       </div>
                     </div>
-                    <h3 className="text-lg font-semibold line-clamp-2 group-hover:text-primary transition-colors">
-                      {news.title}
-                    </h3>
-                  </div>
-
-                  {/* Summary */}
-                  <p className="text-sm text-muted-foreground line-clamp-3">
-                    {news.summary}
-                  </p>
-
-                  {/* Tags */}
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {news.tags.slice(0, 3).map((tag, idx) => (
-                      <span
-                        key={idx}
-                        className="text-xs px-2 py-1 rounded-md bg-muted text-muted-foreground flex items-center gap-1"
-                      >
-                        <Tag className="h-3 w-3" />
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-
-                  {/* Footer */}
-                  <div className="flex items-center justify-between pt-4 border-t border-border">
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Clock className="h-3 w-3" />
-                      <span>{formatDate(news.publishedAt)}</span>
-                    </div>
-                    <div className="flex items-center gap-1 text-primary group-hover:gap-2 transition-all">
-                      <span className="text-xs font-medium">자세히</span>
-                      <ArrowRight className="h-3 w-3" />
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
-      </div>
+                  </CardContent>
+                </Card>
+              </a>
+            );
+          })}
+        </div>
+      )}
 
       {/* Empty State */}
-      {getFilteredNews().length === 0 && (
-        <div className="flex flex-col items-center justify-center py-12 text-center">
-          <Newspaper className="h-12 w-12 text-muted-foreground/50 mb-4" />
+      {!loading && !error && filteredNews.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-20">
+          <div className="p-4 rounded-full bg-muted/50 mb-4">
+            <Newspaper className="h-10 w-10 text-muted-foreground/50" />
+          </div>
           <h3 className="text-lg font-semibold mb-2">뉴스가 없습니다</h3>
-          <p className="text-sm text-muted-foreground max-w-md">
-            선택한 카테고리에 해당하는 뉴스가 없습니다.
+          <p className="text-sm text-muted-foreground max-w-md text-center">
+            {activeFilter === 'all'
+              ? '아직 수집된 뉴스가 없습니다. 잠시 후 다시 확인해주세요.'
+              : '선택한 카테고리에 해당하는 뉴스가 없습니다.'}
           </p>
         </div>
       )}

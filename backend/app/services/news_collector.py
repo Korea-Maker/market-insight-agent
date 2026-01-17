@@ -7,6 +7,7 @@ import logging
 from datetime import datetime
 from typing import List, Dict, Optional
 import feedparser
+import httpx
 from bs4 import BeautifulSoup
 from deep_translator import GoogleTranslator
 from sqlalchemy import select
@@ -90,19 +91,24 @@ async def translate_to_korean(text: str) -> Optional[str]:
 async def fetch_rss_feed(source: str, url: str) -> List[Dict]:
     """
     RSS 피드에서 뉴스 항목을 가져옴
-    
+
     Args:
         source: 뉴스 소스 이름
         url: RSS 피드 URL
-        
+
     Returns:
         뉴스 항목 리스트
     """
     try:
-        # feedparser는 동기 라이브러리이므로 별도 스레드에서 실행
-        loop = asyncio.get_event_loop()
-        feed = await loop.run_in_executor(None, feedparser.parse, url)
-        
+        # httpx로 RSS 피드 내용 가져오기 (SSL 검증 비활성화)
+        async with httpx.AsyncClient(timeout=15.0, verify=False) as client:
+            response = await client.get(url)
+            response.raise_for_status()
+            content = response.text
+
+        # feedparser로 파싱
+        feed = feedparser.parse(content)
+
         if feed.bozo:  # 파싱 오류 확인
             logger.warning(f"{source} RSS 피드 파싱 경고: {feed.bozo_exception}")
         

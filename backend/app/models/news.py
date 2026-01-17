@@ -35,9 +35,9 @@ class News(Base):
     source = Column(String(100), nullable=False, index=True, comment="뉴스 출처")
     description = Column(Text, nullable=True, comment="기사 요약")
     
-    # 메타데이터
+    # 메타데이터 (SQLite 호환: timezone 제거)
     created_at = Column(
-        DateTime(timezone=True),
+        DateTime,
         server_default=func.now(),
         nullable=False,
         comment="데이터베이스 저장 시간"

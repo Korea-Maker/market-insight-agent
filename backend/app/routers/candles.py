@@ -63,7 +63,8 @@ async def fetch_binance_candles(
         if end_time:
             params["endTime"] = end_time
         
-        async with httpx.AsyncClient(timeout=10.0) as client:
+        # 테스트 환경에서 SSL 검증 비활성화 (프로덕션에서는 제거)
+        async with httpx.AsyncClient(timeout=10.0, verify=False) as client:
             response = await client.get(url, params=params)
             response.raise_for_status()
             data = response.json()
