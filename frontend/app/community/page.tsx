@@ -111,18 +111,15 @@ const trendingTags = ["BTC", "ETH", "DeFi", "기술분석", "전략", "뉴스"];
 export default function CommunityPage() {
   const [activeFilter, setActiveFilter] = useState<FilterType>('trending');
 
-  const getFilteredPosts = () => {
-    const sorted = [...mockPosts];
-    switch (activeFilter) {
-      case 'trending':
-        return sorted.sort((a, b) => (b.likes + b.comments) - (a.likes + a.comments));
-      case 'latest':
-        return sorted;
-      case 'top':
-        return sorted.sort((a, b) => b.views - a.views);
-      default:
-        return sorted;
+  const getFilteredPosts = (): Post[] => {
+    const posts = [...mockPosts];
+    if (activeFilter === 'trending') {
+      return posts.sort((a, b) => (b.likes + b.comments) - (a.likes + a.comments));
     }
+    if (activeFilter === 'top') {
+      return posts.sort((a, b) => b.views - a.views);
+    }
+    return posts;
   };
 
   return (

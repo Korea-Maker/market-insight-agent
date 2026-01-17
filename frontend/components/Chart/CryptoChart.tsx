@@ -153,28 +153,15 @@ export const CryptoChart = () => {
         setLoading(true);
         setError(null);
 
-        console.log('[CryptoChart] API 호출 시작:', `${API_BASE_URL}/api/candles?symbol=BTCUSDT&interval=1m&limit=500`);
-
         const response = await fetch(
-          `${API_BASE_URL}/api/candles?symbol=BTCUSDT&interval=1m&limit=500`,
-          {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-          }
+          `${API_BASE_URL}/api/candles?symbol=BTCUSDT&interval=1m&limit=500`
         );
 
-        console.log('[CryptoChart] API 응답 상태:', response.status, response.statusText);
-
         if (!response.ok) {
-          const errorText = await response.text();
-          console.error('[CryptoChart] API 오류 응답:', errorText);
           throw new Error(`API 요청 실패: ${response.status} ${response.statusText}`);
         }
 
         const data = await response.json();
-        console.log('[CryptoChart] API 데이터 수신:', data);
 
         if (!data.candles || !Array.isArray(data.candles)) {
           throw new Error('잘못된 데이터 형식: candles 배열이 없습니다');
@@ -192,17 +179,13 @@ export const CryptoChart = () => {
           throw new Error('캔들 데이터가 없습니다');
         }
 
-        console.log('[CryptoChart] 캔들 데이터 변환 완료:', candles.length, '개');
-
         // 현재 캔들 설정
         const lastCandle = candles[candles.length - 1];
         currentCandleRef.current = { ...lastCandle };
         currentCandleTimeRef.current = lastCandle.time as number;
 
         // 데이터 설정
-        console.log('[CryptoChart] 차트에 데이터 설정 중...');
         candlestickSeries.setData(candles);
-        console.log('[CryptoChart] 캔들스틱 데이터 설정 완료');
 
         const volumeData: VolumeData[] = data.candles.map((candle: OHLCData) => ({
           time: candle.time as Time,
@@ -210,29 +193,17 @@ export const CryptoChart = () => {
           color: candle.close >= candle.open ? 'rgba(0, 150, 136, 0.5)' : 'rgba(255, 82, 82, 0.5)',
         }));
         volumeSeries.setData(volumeData);
-        console.log('[CryptoChart] 거래량 데이터 설정 완료');
 
         const ma20 = calculateMA(candles, 20);
         const ma50 = calculateMA(candles, 50);
-        if (ma20.length > 0) {
-          ma20Series.setData(ma20);
-          console.log('[CryptoChart] MA20 데이터 설정 완료:', ma20.length, '개');
-        }
-        if (ma50.length > 0) {
-          ma50Series.setData(ma50);
-          console.log('[CryptoChart] MA50 데이터 설정 완료:', ma50.length, '개');
-        }
+        if (ma20.length > 0) ma20Series.setData(ma20);
+        if (ma50.length > 0) ma50Series.setData(ma50);
 
         chart.timeScale().fitContent();
-        console.log('[CryptoChart] 차트 초기화 완료');
         setLoading(false);
       } catch (err) {
         console.error('[CryptoChart] 캔들 데이터 로드 실패:', err);
         const errorMessage = err instanceof Error ? err.message : '알 수 없는 오류';
-        console.error('[CryptoChart] 에러 상세:', {
-          message: errorMessage,
-          stack: err instanceof Error ? err.stack : undefined,
-        });
         setError(errorMessage);
         setLoading(false);
       }

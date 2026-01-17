@@ -7,8 +7,6 @@ import {
   Newspaper,
   Clock,
   TrendingUp,
-  Tag,
-  ArrowRight,
   Sparkles,
   Filter,
   RefreshCw,
@@ -141,6 +139,16 @@ export default function NewsPage() {
   // 소스별 그라디언트 색상 가져오기
   const getSourceGradient = (source: string) => {
     return sourceColors[source] || sourceColors.default;
+  };
+
+  // 카테고리 라벨 가져오기
+  const getCategoryLabel = (category: string): string => {
+    switch (category) {
+      case 'market': return '시장';
+      case 'tech': return '기술';
+      case 'regulation': return '규제';
+      default: return category;
+    }
   };
 
   return (
@@ -278,7 +286,7 @@ export default function NewsPage() {
                           category === 'tech' && "bg-blue-500/10 text-blue-600 dark:text-blue-400",
                           category === 'regulation' && "bg-orange-500/10 text-orange-600 dark:text-orange-400"
                         )}>
-                          {category === 'market' ? '시장' : category === 'tech' ? '기술' : '규제'}
+                          {getCategoryLabel(category)}
                         </span>
                       </div>
 

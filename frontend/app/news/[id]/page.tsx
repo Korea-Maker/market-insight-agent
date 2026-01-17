@@ -1,16 +1,7 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { 
-  Newspaper, 
-  Clock, 
-  ArrowLeft,
-  Tag,
-  Eye,
-  Calendar,
-  User,
-  ExternalLink
-} from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { ArrowLeft, Tag, Eye, Calendar, User, ExternalLink } from 'lucide-react';
 
 interface NewsItem {
   id: string;

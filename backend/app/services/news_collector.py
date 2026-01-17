@@ -68,21 +68,20 @@ def clean_html(html_text: Optional[str]) -> Optional[str]:
 async def translate_to_korean(text: str) -> Optional[str]:
     """
     텍스트를 한국어로 번역 (비동기 래퍼)
-    
+
     Args:
         text: 번역할 텍스트
-        
+
     Returns:
         번역된 텍스트 또는 None
     """
     try:
         # deep-translator는 동기 라이브러리이므로 별도 스레드에서 실행
-        loop = asyncio.get_event_loop()
-        result = await loop.run_in_executor(
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(
             None,
             lambda: GoogleTranslator(source='en', target='ko').translate(text)
         )
-        return result
     except Exception as e:
         logger.warning(f"번역 실패: {text[:50]}..., 오류: {e}")
         return None

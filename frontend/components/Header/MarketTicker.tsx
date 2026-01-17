@@ -28,10 +28,12 @@ export const MarketTicker = () => {
     }).format(price);
   };
 
-  const getColor = () => {
-    if (direction === 'up') return 'text-green-500';
-    if (direction === 'down') return 'text-red-500';
-    return 'text-foreground';
+  const getColor = (): string => {
+    switch (direction) {
+      case 'up': return 'text-green-500';
+      case 'down': return 'text-red-500';
+      default: return 'text-foreground';
+    }
   };
 
   return (

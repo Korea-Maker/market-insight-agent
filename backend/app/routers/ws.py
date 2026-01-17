@@ -8,8 +8,7 @@ import logging
 from typing import Set, Dict, Any
 from fastapi import WebSocket, WebSocketDisconnect, APIRouter
 
-from app.core.redis import get_redis_pubsub, close_redis_connections
-from app.core.config import settings
+from app.core.redis import get_redis_pubsub
 
 logger = logging.getLogger(__name__)
 

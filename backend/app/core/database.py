@@ -70,15 +70,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
     각 요청마다 독립적인 세션을 제공하고 자동으로 정리
     """
     async with AsyncSessionLocal() as session:
-        try:
-            yield session
-            await session.commit()
-        except Exception as e:
-            await session.rollback()
-            logger.error(f"데이터베이스 트랜잭션 오류: {e}")
-            raise
-        finally:
-            await session.close()
+        yield session
 
 
 async def init_db():
