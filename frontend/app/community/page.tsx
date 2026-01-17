@@ -191,7 +191,7 @@ export default function CommunityPage() {
           {getFilteredPosts().map((post) => (
             <Card 
               key={post.id} 
-              className="hover:shadow-lg transition-all duration-300 border-l-4 border-l-transparent hover:border-l-primary group cursor-pointer"
+              className="hover:shadow-lg transition-all duration-300 border border-border/60 hover:border-primary/40 bg-card/90 backdrop-blur-sm cursor-pointer group"
             >
               <CardContent className="p-6">
                 <div className="flex gap-4">

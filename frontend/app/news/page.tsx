@@ -249,9 +249,9 @@ export default function NewsPage() {
               >
                 <Card className={cn(
                   "h-full overflow-hidden transition-all duration-300",
-                  "hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1",
-                  "border-border/50 hover:border-primary/30",
-                  "bg-card/50 backdrop-blur-sm"
+                  "hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1",
+                  "border border-border/60 hover:border-primary/40",
+                  "bg-card/90 backdrop-blur-sm"
                 )}>
                   {/* 상단 그라디언트 바 */}
                   <div className={cn(
