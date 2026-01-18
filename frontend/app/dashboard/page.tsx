@@ -21,36 +21,36 @@ const item = {
 
 export default function DashboardPage() {
   return (
-    <div className="flex flex-col h-full p-6 lg:p-8 gap-8 overflow-y-auto">
-      <header className="space-y-6">
+    <div className="flex flex-col h-full space-y-8 pt-24 pb-8"> {/* Added top padding for floating nav */}
+      <header className="px-6 lg:px-8 space-y-6">
         <div className="flex items-center justify-between">
-          <div>
+          <div className="space-y-1">
             <motion.h1 
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="text-3xl font-bold tracking-tight bg-clip-text text-transparent bg-linear-to-r from-foreground to-foreground/70 font-heading"
+              className="text-4xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-foreground via-foreground/90 to-foreground/70 font-heading"
             >
-              Zerocoke Dashboard
+              Market Overview
             </motion.h1>
             <motion.p 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.1 }}
-              className="text-sm text-muted-foreground mt-1"
+              className="text-muted-foreground text-sm font-medium"
             >
-              제로콕(Zerocoke) AI 기반 실시간 시장 분석
+              Real-time AI Market Analysis & Insights
             </motion.p>
           </div>
           <motion.div 
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="flex items-center gap-2"
+            className="hidden sm:flex items-center gap-3 px-4 py-2 rounded-full bg-background/50 border border-border/50 backdrop-blur-sm shadow-sm"
           >
-            <span className="relative flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-            </span>
-            <span className="text-xs font-mono text-green-500">SYSTEM ONLINE</span>
+            <div className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+            </div>
+            <span className="text-xs font-mono font-medium text-emerald-600 dark:text-emerald-400">LIVE CONNECTION</span>
           </motion.div>
         </div>
         <MarketTicker />
@@ -60,74 +60,98 @@ export default function DashboardPage() {
         variants={container}
         initial="hidden"
         animate="show"
-        className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1"
+        className="px-6 lg:px-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 auto-rows-[minmax(180px,auto)]"
       >
-        {/* Main Chart Area - Takes up 2 columns */}
-        <motion.div variants={item} className="lg:col-span-2 w-full h-full min-h-[500px]">
-          <div className="h-full rounded-2xl border border-border/50 bg-card/50 backdrop-blur-sm overflow-hidden shadow-sm hover:shadow-md transition-all duration-300">
+        {/* Main Chart - Large Block */}
+        <motion.div variants={item} className="lg:col-span-3 lg:row-span-2 relative group">
+          <div className="absolute inset-0 bg-gradient-to-wb from-primary/5 to-transparent rounded-3xl -z-10 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <div className="h-full min-h-[500px] rounded-3xl border border-white/10 bg-card/40 backdrop-blur-xl shadow-lg hover:shadow-xl hover:border-primary/20 transition-all duration-300 overflow-hidden">
+            <div className="absolute top-4 right-4 z-10 opactiy-50 hover:opacity-100 transition-opacity">
+               {/* Chart controls placeholder */}
+            </div>
             <TradingChart />
           </div>
         </motion.div>
         
-        {/* AI Insights Sidebar - Takes up 1 column */}
-        <motion.div variants={item} className="lg:col-span-1 w-full">
-          <div className="w-full h-full min-h-[500px] p-6 bg-card/80 backdrop-blur-md rounded-2xl border border-border/50 shadow-sm flex flex-col gap-6">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-primary/70" />
-                  AI Insights
-                </h3>
-              </div>
-              
-              <div className="p-6 rounded-xl bg-muted/30 border border-dashed border-border/60 flex flex-col items-center justify-center text-center space-y-3 min-h-[240px]">
-                <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
-                  <span className="text-2xl">🤖</span>
-                </div>
-                <div>
-                  <span className="text-sm font-medium text-muted-foreground block mb-1">AI Models Initializing</span>
-                  <p className="text-xs text-muted-foreground/60">
-                    Sentiment Analysis & Predictive models will appear here.
-                  </p>
+        {/* AI & System Status - Vertical Stack */}
+        <motion.div variants={item} className="lg:col-span-1 lg:row-span-2 flex flex-col gap-6">
+          {/* AI Status Card */}
+          <div className="flex-1 rounded-3xl border border-white/10 bg-card/40 backdrop-blur-xl p-6 shadow-lg hover:shadow-xl hover:border-primary/20 transition-all duration-300 flex flex-col relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-primary/10 blur-[50px] rounded-full pointer-events-none" />
+            
+            <h3 className="text-lg font-bold font-heading mb-4 flex items-center gap-2">
+              <span className="text-2xl">🧠</span> AI Engine
+            </h3>
+            
+            <div className="flex-1 flex flex-col items-center justify-center text-center space-y-4 p-4 rounded-2xl bg-muted/20 border border-white/5">
+              <div className="relative">
+                <div className="absolute inset-0 bg-primary/30 blur-xl animate-pulse-slow" />
+                <div className="relative h-14 w-14 rounded-2xl bg-gradient-to-br from-primary via-primary/80 to-primary/50 flex items-center justify-center shadow-lg shadow-primary/20">
+                  <span className="text-2xl text-white">⚡</span>
                 </div>
               </div>
-              
-              <div className="space-y-3 pt-2">
-                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">System Status</h4>
-                <div className="space-y-2.5">
-                  <div className="flex justify-between items-center text-sm p-3 rounded-lg bg-muted/20 border border-border/30">
-                    <span className="text-muted-foreground">Data Ingestor</span>
-                    <span className="flex items-center gap-1.5 text-xs text-green-500 font-medium bg-green-500/10 px-2 py-0.5 rounded-full">
-                      <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
-                      Active
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm p-3 rounded-lg bg-muted/20 border border-border/30">
-                    <span className="text-muted-foreground">Analysis Engine</span>
-                    <span className="flex items-center gap-1.5 text-xs text-yellow-500 font-medium bg-yellow-500/10 px-2 py-0.5 rounded-full">
-                      <span className="h-1.5 w-1.5 rounded-full bg-yellow-500" />
-                      Standby
-                    </span>
-                  </div>
-                </div>
+              <div>
+                <span className="text-sm font-semibold block text-foreground/90">Processing Data</span>
+                <span className="text-xs text-muted-foreground">Analysing market trends</span>
               </div>
             </div>
+            
+            <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
+               <div className="flex justify-between text-xs">
+                 <span className="text-muted-foreground">Confidence</span>
+                 <span className="font-mono text-primary">98.4%</span>
+               </div>
+               <div className="flex justify-between text-xs">
+                 <span className="text-muted-foreground">Latency</span>
+                 <span className="font-mono text-emerald-500">24ms</span>
+               </div>
+            </div>
+          </div>
+          
+          {/* Order Book / Small Stat */}
+          <div className="h-[200px] rounded-3xl border border-white/10 bg-card/40 backdrop-blur-xl p-6 shadow-lg hover:shadow-xl hover:border-primary/20 transition-all duration-300 flex flex-col justify-between">
+             <div className="flex items-start justify-between">
+                <h3 className="font-semibold text-muted-foreground text-sm">Active Orders</h3>
+                <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+             </div>
+             <div className="space-y-1">
+               <span className="text-3xl font-bold font-mono tracking-tighter">1,248</span>
+               <div className="h-1 w-full bg-muted/30 rounded-full overflow-hidden">
+                 <div className="h-full w-[70%] bg-emerald-500 rounded-full" />
+               </div>
+             </div>
           </div>
         </motion.div>
         
-        {/* Placeholder for future charts (Row 2) */}
-        <motion.div variants={item} className="lg:col-span-2 min-h-[300px] rounded-2xl border border-dashed border-border/50 flex items-center justify-center bg-muted/5 hover:bg-muted/10 transition-colors">
-          <div className="text-center space-y-2">
-            <span className="text-3xl opacity-20">📊</span>
-            <p className="text-sm text-muted-foreground">Multi-Chart Grid (Future)</p>
+        {/* Bottom Row - Bento Grid items */}
+        <motion.div variants={item} className="lg:col-span-2 h-[240px] rounded-3xl border border-white/10 bg-card/40 backdrop-blur-xl p-6 shadow-lg hover:shadow-xl hover:border-primary/20 transition-all duration-300 relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <h3 className="font-semibold text-foreground/80 mb-4 z-10 relative">Sentiment Analysis</h3>
+          <div className="h-32 w-full flex items-end gap-2 z-10 relative">
+            <div className="w-[10%] h-[40%] bg-primary/20 rounded-t-lg" />
+            <div className="w-[10%] h-[70%] bg-primary/40 rounded-t-lg" />
+            <div className="w-[10%] h-[50%] bg-primary/30 rounded-t-lg" />
+            <div className="w-[10%] h-[80%] bg-primary/60 rounded-t-lg" />
+            <div className="w-[10%] h-[60%] bg-primary/50 rounded-t-lg" />
+            <div className="w-[10%] h-[90%] bg-primary/80 rounded-t-lg" />
           </div>
+          <p className="absolute bottom-6 right-6 text-xs text-muted-foreground font-mono">
+            Updated 2s ago
+          </p>
         </motion.div>
-        <motion.div variants={item} className="lg:col-span-1 min-h-[300px] rounded-2xl border border-dashed border-border/50 flex items-center justify-center bg-muted/5 hover:bg-muted/10 transition-colors">
-          <div className="text-center space-y-2">
-            <span className="text-3xl opacity-20">📑</span>
-            <p className="text-sm text-muted-foreground">Order Book (Future)</p>
-          </div>
+        
+        <motion.div variants={item} className="lg:col-span-2 h-[240px] rounded-3xl border border-white/10 bg-card/40 backdrop-blur-xl p-6 shadow-lg hover:shadow-xl hover:border-primary/20 transition-all duration-300 flex items-center justify-center relative overlow-hidden">
+           <div className="text-center space-y-3">
+             <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-muted/30 text-2xl">
+               📈
+             </div>
+             <div>
+               <h4 className="font-semibold">Portfolio Performance</h4>
+               <p className="text-xs text-muted-foreground mt-1">Connect wallet to view analytics</p>
+             </div>
+           </div>
         </motion.div>
+
       </motion.div>
     </div>
   );

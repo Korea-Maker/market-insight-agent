@@ -18,8 +18,14 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
       <TopNav />
       
       {/* Main Content Area */}
-      <main className="flex-1 w-full relative">
-        <div className="absolute inset-0 bg-linear-to-tr from-primary/5 via-transparent to-secondary/5 pointer-events-none fixed" />
+      <main className="flex-1 w-full relative overflow-hidden">
+        {/* Ambient Background Effects */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/20 rounded-full blur-[120px] opacity-40 animate-pulse-slow" />
+          <div className="absolute top-[20%] right-[-10%] w-[30%] h-[40%] bg-secondary/20 rounded-full blur-[120px] opacity-30 delay-1000" />
+          <div className="absolute bottom-[-10%] left-[20%] w-[50%] h-[30%] bg-primary/10 rounded-full blur-[120px] opacity-30 delay-2000" />
+        </div>
+        <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]" />
         <motion.div 
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
