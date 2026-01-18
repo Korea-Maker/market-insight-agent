@@ -8,7 +8,7 @@ interface MainLayoutProps {
   children: React.ReactNode;
 }
 
-export const MainLayout = ({ children }: MainLayoutProps) => {
+export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
   // Initialize WebSocket connection globally
   useWebSocket();
 

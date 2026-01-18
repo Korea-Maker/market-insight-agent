@@ -18,6 +18,34 @@ import { cn } from '@/lib/utils';
 
 type FilterType = 'trending' | 'latest' | 'top';
 
+interface FilterButtonProps {
+  filter: FilterType;
+  activeFilter: FilterType;
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  onClick: (filter: FilterType) => void;
+}
+
+function FilterButton({ filter, activeFilter, icon: Icon, label, onClick }: FilterButtonProps): React.ReactElement {
+  const isActive = activeFilter === filter;
+
+  return (
+    <button
+      onClick={() => onClick(filter)}
+      className={cn(
+        "px-4 py-2 rounded-lg text-sm font-medium transition-all",
+        "flex items-center gap-2",
+        isActive
+          ? "bg-primary text-primary-foreground shadow-sm"
+          : "text-muted-foreground hover:text-foreground hover:bg-accent"
+      )}
+    >
+      <Icon className="h-4 w-4" />
+      {label}
+    </button>
+  );
+}
+
 interface Post {
   id: number;
   title: string;
@@ -140,45 +168,27 @@ export default function CommunityPage() {
 
         {/* Filter Tabs */}
         <div className="flex items-center gap-2 border-b border-border pb-2">
-          <button
-            onClick={() => setActiveFilter('trending')}
-            className={cn(
-              "px-4 py-2 rounded-lg text-sm font-medium transition-all",
-              "flex items-center gap-2",
-              activeFilter === 'trending'
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground hover:bg-accent"
-            )}
-          >
-            <TrendingUp className="h-4 w-4" />
-            인기
-          </button>
-          <button
-            onClick={() => setActiveFilter('latest')}
-            className={cn(
-              "px-4 py-2 rounded-lg text-sm font-medium transition-all",
-              "flex items-center gap-2",
-              activeFilter === 'latest'
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground hover:bg-accent"
-            )}
-          >
-            <Clock className="h-4 w-4" />
-            최신
-          </button>
-          <button
-            onClick={() => setActiveFilter('top')}
-            className={cn(
-              "px-4 py-2 rounded-lg text-sm font-medium transition-all",
-              "flex items-center gap-2",
-              activeFilter === 'top'
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground hover:bg-accent"
-            )}
-          >
-            <Eye className="h-4 w-4" />
-            조회수
-          </button>
+          <FilterButton
+            filter="trending"
+            activeFilter={activeFilter}
+            icon={TrendingUp}
+            label="인기"
+            onClick={setActiveFilter}
+          />
+          <FilterButton
+            filter="latest"
+            activeFilter={activeFilter}
+            icon={Clock}
+            label="최신"
+            onClick={setActiveFilter}
+          />
+          <FilterButton
+            filter="top"
+            activeFilter={activeFilter}
+            icon={Eye}
+            label="조회수"
+            onClick={setActiveFilter}
+          />
         </div>
       </header>
 

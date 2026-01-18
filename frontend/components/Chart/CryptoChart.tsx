@@ -26,7 +26,20 @@ interface MAData {
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
-export const CryptoChart = () => {
+// 차트 색상 상수
+const CHART_COLORS = {
+  up: '#26a69a',
+  down: '#ef5350',
+  ma20: '#2962FF',
+  ma50: '#FF6D00',
+  grid: 'rgba(42, 46, 57, 0.1)',
+  border: 'rgba(42, 46, 57, 0.5)',
+  text: '#D9D9D9',
+  volumeUp: 'rgba(0, 150, 136, 0.5)',
+  volumeDown: 'rgba(255, 82, 82, 0.5)',
+} as const;
+
+export function CryptoChart(): React.ReactElement {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const candlestickSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
@@ -64,21 +77,21 @@ export const CryptoChart = () => {
     const chart = createChart(chartContainerRef.current, {
       layout: {
         background: { type: ColorType.Solid, color: 'transparent' },
-        textColor: '#D9D9D9',
+        textColor: CHART_COLORS.text,
       },
       grid: {
-        vertLines: { color: 'rgba(42, 46, 57, 0.1)' },
-        horzLines: { color: 'rgba(42, 46, 57, 0.1)' },
+        vertLines: { color: CHART_COLORS.grid },
+        horzLines: { color: CHART_COLORS.grid },
       },
       width: chartContainerRef.current.clientWidth,
       height: chartContainerRef.current.clientHeight || 500,
       timeScale: {
         timeVisible: true,
         secondsVisible: false,
-        borderColor: 'rgba(42, 46, 57, 0.5)',
+        borderColor: CHART_COLORS.border,
       },
       rightPriceScale: {
-        borderColor: 'rgba(42, 46, 57, 0.5)',
+        borderColor: CHART_COLORS.border,
       },
     });
 
@@ -86,17 +99,17 @@ export const CryptoChart = () => {
 
     // 캔들스틱 시리즈 추가 (v5 API)
     const candlestickSeries = chart.addSeries(CandlestickSeries, {
-      upColor: '#26a69a',
-      downColor: '#ef5350',
+      upColor: CHART_COLORS.up,
+      downColor: CHART_COLORS.down,
       borderVisible: false,
-      wickUpColor: '#26a69a',
-      wickDownColor: '#ef5350',
+      wickUpColor: CHART_COLORS.up,
+      wickDownColor: CHART_COLORS.down,
     });
     candlestickSeriesRef.current = candlestickSeries;
 
     // 거래량 히스토그램 추가 (별도 패널)
     const volumeSeries = chart.addSeries(HistogramSeries, {
-      color: '#26a69a',
+      color: CHART_COLORS.up,
       priceFormat: {
         type: 'volume',
       },
@@ -106,7 +119,7 @@ export const CryptoChart = () => {
 
     // 이동평균선 추가
     const ma20Series = chart.addSeries(LineSeries, {
-      color: '#2962FF',
+      color: CHART_COLORS.ma20,
       lineWidth: 2,
       title: 'MA20',
       priceLineVisible: false,
@@ -115,7 +128,7 @@ export const CryptoChart = () => {
     ma20SeriesRef.current = ma20Series;
 
     const ma50Series = chart.addSeries(LineSeries, {
-      color: '#FF6D00',
+      color: CHART_COLORS.ma50,
       lineWidth: 2,
       title: 'MA50',
       priceLineVisible: false,
@@ -190,7 +203,7 @@ export const CryptoChart = () => {
         const volumeData: VolumeData[] = data.candles.map((candle: OHLCData) => ({
           time: candle.time as Time,
           value: candle.volume,
-          color: candle.close >= candle.open ? 'rgba(0, 150, 136, 0.5)' : 'rgba(255, 82, 82, 0.5)',
+          color: candle.close >= candle.open ? CHART_COLORS.volumeUp : CHART_COLORS.volumeDown,
         }));
         volumeSeries.setData(volumeData);
 

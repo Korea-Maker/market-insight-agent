@@ -31,7 +31,7 @@ const navItems: NavItem[] = [
   },
 ];
 
-export const TopNav = () => {
+export function TopNav(): React.ReactElement {
   const pathname = usePathname();
 
   return (

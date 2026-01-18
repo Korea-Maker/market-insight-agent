@@ -1,6 +1,6 @@
 "use client";
 
-import { CryptoChart } from '@/components/Chart/CryptoChart';
+import { TradingChart } from '@/components/Chart/TradingChart';
 import { MarketTicker } from '@/components/Header/MarketTicker';
 import { motion } from 'framer-motion';
 
@@ -65,7 +65,7 @@ export default function DashboardPage() {
         {/* Main Chart Area - Takes up 2 columns */}
         <motion.div variants={item} className="lg:col-span-2 w-full h-full min-h-[500px]">
           <div className="h-full rounded-2xl border border-border/50 bg-card/50 backdrop-blur-sm overflow-hidden shadow-sm hover:shadow-md transition-all duration-300">
-            <CryptoChart />
+            <TradingChart />
           </div>
         </motion.div>
         

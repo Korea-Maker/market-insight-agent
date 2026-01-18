@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { ArrowLeft, Tag, Eye, Calendar, User, ExternalLink } from 'lucide-react';
+import { getCategoryLabel } from '@/lib/news-utils';
 
 interface NewsItem {
   id: string;
@@ -185,19 +186,6 @@ export default async function NewsDetailPage({ params }: NewsDetailPageProps) {
       hour: '2-digit',
       minute: '2-digit',
     });
-  };
-
-  const getCategoryLabel = (category: string) => {
-    switch (category) {
-      case 'market':
-        return '시장';
-      case 'tech':
-        return '기술';
-      case 'regulation':
-        return '규제';
-      default:
-        return category;
-    }
   };
 
   return (

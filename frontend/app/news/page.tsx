@@ -15,6 +15,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getCategoryLabel, getCategoryStyle } from '@/lib/news-utils';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -139,16 +140,6 @@ export default function NewsPage() {
   // 소스별 그라디언트 색상 가져오기
   const getSourceGradient = (source: string) => {
     return sourceColors[source] || sourceColors.default;
-  };
-
-  // 카테고리 라벨 가져오기
-  const getCategoryLabel = (category: string): string => {
-    switch (category) {
-      case 'market': return '시장';
-      case 'tech': return '기술';
-      case 'regulation': return '규제';
-      default: return category;
-    }
   };
 
   return (
@@ -282,9 +273,7 @@ export default function NewsPage() {
                         {/* 카테고리 */}
                         <span className={cn(
                           "text-xs font-medium px-2.5 py-1 rounded-lg",
-                          category === 'market' && "bg-green-500/10 text-green-600 dark:text-green-400",
-                          category === 'tech' && "bg-blue-500/10 text-blue-600 dark:text-blue-400",
-                          category === 'regulation' && "bg-orange-500/10 text-orange-600 dark:text-orange-400"
+                          getCategoryStyle(category)
                         )}>
                           {getCategoryLabel(category)}
                         </span>

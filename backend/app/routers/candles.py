@@ -128,7 +128,7 @@ async def get_candles(
     interval: str = Query(
         default="1m",
         description="시간 간격 (1m, 5m, 15m, 1h, 4h, 1d 등)",
-        regex="^(1m|3m|5m|15m|30m|1h|2h|4h|6h|8h|12h|1d|3d|1w|1M)$",
+        pattern="^(1m|3m|5m|15m|30m|1h|2h|4h|6h|8h|12h|1d|3d|1w|1M)$",
     ),
     limit: int = Query(default=500, ge=1, le=1000, description="가져올 캔들 수 (최대 1000)"),
     end_time: Optional[int] = Query(default=None, description="종료 시간 (Unix timestamp in milliseconds)"),
