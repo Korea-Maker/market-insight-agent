@@ -2,6 +2,7 @@
 애플리케이션 설정
 환경 변수 관리를 위해 Pydantic Settings 사용
 """
+import secrets
 from pydantic_settings import BaseSettings
 from typing import List
 
@@ -30,6 +31,25 @@ class Settings(BaseSettings):
     # Redis 설정
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
+
+    # JWT 설정
+    JWT_SECRET_KEY: str = secrets.token_urlsafe(32)
+    JWT_ALGORITHM: str = "HS256"
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
+    JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+
+    # OAuth 설정 (Google)
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+    GOOGLE_REDIRECT_URI: str = "http://localhost:8000/api/auth/oauth/google/callback"
+
+    # OAuth 설정 (GitHub)
+    GITHUB_CLIENT_ID: str = ""
+    GITHUB_CLIENT_SECRET: str = ""
+    GITHUB_REDIRECT_URI: str = "http://localhost:8000/api/auth/oauth/github/callback"
+
+    # Frontend URL (OAuth 콜백 후 리다이렉트)
+    FRONTEND_URL: str = "http://localhost:3000"
 
     class Config:
         env_file = ".env"

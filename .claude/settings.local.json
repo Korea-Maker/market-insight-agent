@@ -21,7 +21,8 @@
       "Bash(npx tsc:*)",
       "Bash(./node_modules/.bin/tsc:*)",
       "Bash(taskkill:*)",
-      "Bash(tasklist:*)"
+      "Bash(tasklist:*)",
+      "Bash(python -c \"from app.models import *; print\\(''Models OK''\\)\")"
     ]
   },
   "spinnerTipsEnabled": true

@@ -11,7 +11,7 @@ from contextlib import asynccontextmanager
 
 from app.core.config import settings
 from app.core.database import init_db, close_db
-from app.routers import ws, candles, news
+from app.routers import ws, candles, news, auth, users, posts, comments
 
 # 로깅 설정
 logging.basicConfig(
@@ -116,6 +116,12 @@ app.add_middleware(
 app.include_router(ws.router)
 app.include_router(candles.router)
 app.include_router(news.router)
+
+# 커뮤니티 라우터
+app.include_router(auth.router)
+app.include_router(users.router)
+app.include_router(posts.router)
+app.include_router(comments.router)
 
 
 @app.get("/health")

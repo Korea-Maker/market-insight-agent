@@ -121,11 +121,11 @@ export default function NewsPage() {
     const text = `${title} ${description || ''}`.toLowerCase();
 
     if (text.includes('sec') || text.includes('regulation') || text.includes('law') ||
-        text.includes('규제') || text.includes('법') || text.includes('정책')) {
+      text.includes('규제') || text.includes('법') || text.includes('정책')) {
       return 'regulation';
     }
     if (text.includes('upgrade') || text.includes('update') || text.includes('protocol') ||
-        text.includes('기술') || text.includes('업그레이드') || text.includes('개발')) {
+      text.includes('기술') || text.includes('업그레이드') || text.includes('개발')) {
       return 'tech';
     }
     return 'market';

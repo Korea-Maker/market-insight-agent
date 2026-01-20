@@ -46,43 +46,48 @@
 /* Midnight Theme Colors */
 :root {
   --radius: 0.75rem;
-  
+
   /* Light Mode - Clean, crisp inputs */
   --background: oklch(0.99 0.005 240);
   --foreground: oklch(0.13 0.02 260);
-  
+
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.13 0.02 260);
-  
+
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.13 0.02 260);
-  
+
   /* Primary: Deep Royal Blue / Electric Navy (Sophisticated Tech) */
-  --primary: oklch(0.5 0.22 265); 
+  --primary: oklch(0.5 0.22 265);
   --primary-foreground: oklch(0.98 0 0);
-  
+
   --secondary: oklch(0.97 0.01 240);
   --secondary-foreground: oklch(0.5 0.22 265);
-  
+
   --muted: oklch(0.97 0.01 240);
   --muted-foreground: oklch(0.55 0.04 260);
-  
+
   --accent: oklch(0.96 0.01 260);
   --accent-foreground: oklch(0.5 0.22 265);
-  
+
   --destructive: oklch(0.6 0.18 25);
   --destructive-foreground: oklch(0.98 0 0);
 
   --border: oklch(0.92 0.01 240);
   --input: oklch(0.92 0.01 240);
   --ring: oklch(0.5 0.22 265);
-  
-  --chart-1: oklch(0.5 0.22 265); /* Navy Blue */
-  --chart-2: oklch(0.6 0.18 230); /* Sky Blue */
-  --chart-3: oklch(0.65 0.15 190); /* Teal */
-  --chart-4: oklch(0.7 0.15 150); /* Green */
-  --chart-5: oklch(0.75 0.12 80); /* Gold */
-  
+
+  --chart-1: oklch(0.5 0.22 265);
+  /* Navy Blue */
+  --chart-2: oklch(0.6 0.18 230);
+  /* Sky Blue */
+  --chart-3: oklch(0.65 0.15 190);
+  /* Teal */
+  --chart-4: oklch(0.7 0.15 150);
+  /* Green */
+  --chart-5: oklch(0.75 0.12 80);
+  /* Gold */
+
   --sidebar: oklch(0.99 0.005 240);
   --sidebar-foreground: oklch(0.13 0.02 260);
   --sidebar-primary: oklch(0.5 0.22 265);
@@ -95,43 +100,48 @@
 
 .dark {
   /* Midnight Dark Mode - Deep Navy/Black base (More sophisticated than purple) */
-  --background: oklch(0.11 0.03 260); 
+  --background: oklch(0.11 0.03 260);
   --foreground: oklch(0.98 0.005 240);
-  
+
   /* Cards: Slightly lighter for separation, distinct from background */
   --card: oklch(0.16 0.03 260 / 0.7);
   --card-foreground: oklch(0.98 0.005 240);
-  
+
   --popover: oklch(0.14 0.03 260);
   --popover-foreground: oklch(0.98 0.005 240);
-  
+
   /* Primary: Electric Blue/Indigo (Not Purple) */
-  --primary: oklch(0.65 0.22 265); 
+  --primary: oklch(0.65 0.22 265);
   --primary-foreground: oklch(0.11 0.03 260);
-  
+
   --secondary: oklch(0.2 0.04 260);
   --secondary-foreground: oklch(0.98 0.005 240);
-  
+
   --muted: oklch(0.2 0.04 260);
   --muted-foreground: oklch(0.7 0.03 260);
-  
+
   --accent: oklch(0.2 0.04 260);
   --accent-foreground: oklch(0.98 0.005 240);
-  
+
   --destructive: oklch(0.6 0.18 25);
   --destructive-foreground: oklch(0.98 0.005 240);
-  
+
   /* Borders: Visible but subtle blue-grey */
-  --border: oklch(0.3 0.04 260 / 0.6); 
+  --border: oklch(0.3 0.04 260 / 0.6);
   --input: oklch(0.3 0.04 260 / 0.6);
   --ring: oklch(0.65 0.22 265);
-  
-  --chart-1: oklch(0.65 0.22 265); /* Electric Blue */
-  --chart-2: oklch(0.7 0.18 230);  /* Sky */
-  --chart-3: oklch(0.75 0.15 190); /* Cyan */
-  --chart-4: oklch(0.75 0.15 150); /* Mint */
-  --chart-5: oklch(0.8 0.12 80);   /* Soft Yellow */
-  
+
+  --chart-1: oklch(0.65 0.22 265);
+  /* Electric Blue */
+  --chart-2: oklch(0.7 0.18 230);
+  /* Sky */
+  --chart-3: oklch(0.75 0.15 190);
+  /* Cyan */
+  --chart-4: oklch(0.75 0.15 150);
+  /* Mint */
+  --chart-5: oklch(0.8 0.12 80);
+  /* Soft Yellow */
+
   --sidebar: oklch(0.13 0.03 260 / 0.85);
   --sidebar-foreground: oklch(0.98 0.005 240);
   --sidebar-primary: oklch(0.65 0.22 265);
@@ -146,11 +156,12 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground tracking-tight;
     /* Rich gradient background for dark mode */
   }
-  
+
   /* Smooth scrolling */
   html {
     scroll-behavior: smooth;
@@ -161,11 +172,11 @@
   .glass {
     @apply bg-background/60 backdrop-blur-xl border border-white/10 shadow-lg;
   }
-  
+
   .glass-card {
     @apply bg-card backdrop-blur-md border border-white/5 shadow-sm hover:shadow-md transition-all duration-300;
   }
-  
+
   .glass-sidebar {
     @apply bg-sidebar backdrop-blur-xl border-r border-sidebar-border;
   }

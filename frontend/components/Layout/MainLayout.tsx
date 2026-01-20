@@ -16,7 +16,7 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
     <div className="flex flex-col min-h-screen w-full bg-background text-foreground transition-colors duration-300 font-sans">
       {/* Top Navigation */}
       <TopNav />
-      
+
       {/* Main Content Area */}
       <main className="flex-1 w-full relative overflow-hidden">
         {/* Ambient Background Effects */}
@@ -26,11 +26,11 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
           <div className="absolute bottom-[-10%] left-[20%] w-[50%] h-[30%] bg-primary/10 rounded-full blur-[120px] opacity-30 delay-2000" />
         </div>
         <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]" />
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: "easeOut", delay: 0.2 }}
-          className="container mx-auto p-4 lg:p-6 pb-20 relative z-10"
+          className="container mx-auto p-4 lg:p-6 pb-20 z-10"
         >
           {children}
         </motion.div>
