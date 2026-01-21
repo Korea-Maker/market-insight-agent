@@ -51,6 +51,30 @@ async def ensure_default_sources():
         logger.info("기본 소스 마이그레이션 완료")
 
 
+async def get_enabled_sources() -> List[Dict]:
+    """
+    데이터베이스에서 활성화된 RSS 소스 목록을 조회
+
+    Returns:
+        활성화된 소스 목록 [{"name": str, "url": str}, ...]
+    """
+    async with AsyncSessionLocal() as session:
+        stmt = select(IntelligenceSource).where(
+            IntelligenceSource.is_enabled == True,
+            IntelligenceSource.source_type == "rss"
+        )
+        result = await session.execute(stmt)
+        sources = result.scalars().all()
+
+        enabled_sources = [
+            {"name": source.name, "url": source.url}
+            for source in sources
+        ]
+
+        logger.debug(f"활성화된 RSS 소스 {len(enabled_sources)}개 조회됨")
+        return enabled_sources
+
+
 def parse_published_date(date_str: Optional[str]) -> Optional[datetime]:
     """
     RSS 피드의 발행 날짜 문자열을 datetime 객체로 변환
@@ -223,31 +247,43 @@ async def collect_news():
     """
     모든 RSS 피드에서 뉴스를 수집하고 저장
     스케줄러에 의해 주기적으로 호출됨
+    데이터베이스에서 활성화된 소스를 조회하여 사용
     """
     logger.info("뉴스 수집 시작...")
-    
+
     total_collected = 0
     total_saved = 0
-    
+
+    # 데이터베이스에서 활성화된 RSS 소스 조회
+    enabled_sources = await get_enabled_sources()
+
+    if not enabled_sources:
+        logger.warning("활성화된 RSS 소스가 없습니다. 뉴스 수집을 건너뜁니다.")
+        return
+
+    logger.info(f"활성화된 RSS 소스 {len(enabled_sources)}개로 뉴스 수집 시작")
+
     # 모든 RSS 피드 순회
-    for source, url in RSS_FEEDS.items():
+    for source_info in enabled_sources:
+        source = source_info["name"]
+        url = source_info["url"]
         try:
             # RSS 피드에서 뉴스 가져오기
             news_items = await fetch_rss_feed(source, url)
             total_collected += len(news_items)
-            
+
             # 각 뉴스 항목 저장 (순차 처리 - 번역 API rate limit 고려)
             for news_item in news_items:
                 saved = await save_news_to_db(news_item)
                 if saved:
                     total_saved += 1
-                
+
                 # 번역 API rate limit 방지를 위한 짧은 대기
                 await asyncio.sleep(0.5)
-            
+
         except Exception as e:
             logger.error(f"{source} 뉴스 수집 중 오류: {e}")
-    
+
     logger.info(f"뉴스 수집 완료: {total_collected}개 수집, {total_saved}개 새로 저장")
 
 
