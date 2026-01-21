@@ -81,7 +81,8 @@ async def init_db():
     async with engine.begin() as conn:
         # 모든 모델을 임포트하여 Base.metadata에 등록
         from app.models import (  # noqa: F401
-            News, User, OAuthAccount, Post, PostLike, Tag, Comment, CommentLike
+            News, User, OAuthAccount, Post, PostLike, Tag, Comment, CommentLike,
+            IntelligenceSource,
         )
 
         await conn.run_sync(Base.metadata.create_all)

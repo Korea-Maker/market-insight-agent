@@ -5,6 +5,7 @@ from app.models.news import News
 from app.models.user import User, OAuthAccount
 from app.models.post import Post, PostLike, Tag, post_tags
 from app.models.comment import Comment, CommentLike
+from app.models.source import IntelligenceSource
 
 __all__ = [
     "News",
@@ -16,4 +17,5 @@ __all__ = [
     "post_tags",
     "Comment",
     "CommentLike",
+    "IntelligenceSource",
 ]
