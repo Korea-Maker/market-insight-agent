@@ -40,6 +40,15 @@ from app.schemas.comment import (
     CommentResponse,
     CommentListResponse,
 )
+from app.schemas.source import (
+    SourceBase,
+    SourceCreate,
+    SourceUpdate,
+    SourceResponse,
+    SourceListItem,
+    SourceListResponse,
+    SOURCE_TYPES,
+)
 
 __all__ = [
     # User
@@ -77,4 +86,12 @@ __all__ = [
     "CommentUpdate",
     "CommentResponse",
     "CommentListResponse",
+    # Source
+    "SourceBase",
+    "SourceCreate",
+    "SourceUpdate",
+    "SourceResponse",
+    "SourceListItem",
+    "SourceListResponse",
+    "SOURCE_TYPES",
 ]
