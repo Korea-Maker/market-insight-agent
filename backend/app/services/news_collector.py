@@ -75,6 +75,56 @@ async def get_enabled_sources() -> List[Dict]:
         return enabled_sources
 
 
+async def update_source_success(source_name: str) -> None:
+    """
+    소스 수집 성공 시 상태 업데이트
+
+    Args:
+        source_name: 소스 이름
+    """
+    async with AsyncSessionLocal() as session:
+        try:
+            stmt = select(IntelligenceSource).where(IntelligenceSource.name == source_name)
+            result = await session.execute(stmt)
+            source = result.scalar_one_or_none()
+
+            if source:
+                source.last_fetch_at = datetime.utcnow()
+                source.last_success_at = datetime.utcnow()
+                source.success_count = (source.success_count or 0) + 1
+                source.last_error = None
+                await session.commit()
+                logger.debug(f"{source_name} 소스 성공 상태 업데이트 완료")
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"{source_name} 소스 성공 상태 업데이트 실패: {e}")
+
+
+async def update_source_failure(source_name: str, error: str) -> None:
+    """
+    소스 수집 실패 시 상태 업데이트
+
+    Args:
+        source_name: 소스 이름
+        error: 오류 메시지
+    """
+    async with AsyncSessionLocal() as session:
+        try:
+            stmt = select(IntelligenceSource).where(IntelligenceSource.name == source_name)
+            result = await session.execute(stmt)
+            source = result.scalar_one_or_none()
+
+            if source:
+                source.last_fetch_at = datetime.utcnow()
+                source.failure_count = (source.failure_count or 0) + 1
+                source.last_error = str(error)[:1000]  # 오류 메시지 길이 제한
+                await session.commit()
+                logger.debug(f"{source_name} 소스 실패 상태 업데이트 완료")
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"{source_name} 소스 실패 상태 업데이트 실패: {e}")
+
+
 def parse_published_date(date_str: Optional[str]) -> Optional[datetime]:
     """
     RSS 피드의 발행 날짜 문자열을 datetime 객체로 변환
@@ -281,8 +331,13 @@ async def collect_news():
                 # 번역 API rate limit 방지를 위한 짧은 대기
                 await asyncio.sleep(0.5)
 
+            # 소스 수집 성공 상태 업데이트
+            await update_source_success(source)
+
         except Exception as e:
             logger.error(f"{source} 뉴스 수집 중 오류: {e}")
+            # 소스 수집 실패 상태 업데이트
+            await update_source_failure(source, str(e))
 
     logger.info(f"뉴스 수집 완료: {total_collected}개 수집, {total_saved}개 새로 저장")
 
