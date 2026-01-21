@@ -1,0 +1,39 @@
+{
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true
+  },
+  "permissions": {
+    "defaultMode": "acceptEdits",
+    "allow": [
+      "Read(./**)",
+      "Write(./**)",
+      "Edit(./**)",
+      "Glob(./**)",
+      "Grep(./**)",
+      "Read(C:\\Users\\project5587\\Desktop\\backup_jw\\Dev\\market-insight-agent\\.auto-claude\\worktrees\\tasks\\002-sqlite/**)",
+      "Write(C:\\Users\\project5587\\Desktop\\backup_jw\\Dev\\market-insight-agent\\.auto-claude\\worktrees\\tasks\\002-sqlite/**)",
+      "Edit(C:\\Users\\project5587\\Desktop\\backup_jw\\Dev\\market-insight-agent\\.auto-claude\\worktrees\\tasks\\002-sqlite/**)",
+      "Glob(C:\\Users\\project5587\\Desktop\\backup_jw\\Dev\\market-insight-agent\\.auto-claude\\worktrees\\tasks\\002-sqlite/**)",
+      "Grep(C:\\Users\\project5587\\Desktop\\backup_jw\\Dev\\market-insight-agent\\.auto-claude\\worktrees\\tasks\\002-sqlite/**)",
+      "Read(C:\\Users\\project5587\\Desktop\\backup_jw\\Dev\\market-insight-agent\\.auto-claude\\worktrees\\tasks\\002-sqlite\\.auto-claude\\specs\\002-sqlite/**)",
+      "Write(C:\\Users\\project5587\\Desktop\\backup_jw\\Dev\\market-insight-agent\\.auto-claude\\worktrees\\tasks\\002-sqlite\\.auto-claude\\specs\\002-sqlite/**)",
+      "Edit(C:\\Users\\project5587\\Desktop\\backup_jw\\Dev\\market-insight-agent\\.auto-claude\\worktrees\\tasks\\002-sqlite\\.auto-claude\\specs\\002-sqlite/**)",
+      "Read(C:\\Users\\project5587\\Desktop\\backup_jw\\Dev\\market-insight-agent\\.auto-claude/**)",
+      "Write(C:\\Users\\project5587\\Desktop\\backup_jw\\Dev\\market-insight-agent\\.auto-claude/**)",
+      "Edit(C:\\Users\\project5587\\Desktop\\backup_jw\\Dev\\market-insight-agent\\.auto-claude/**)",
+      "Glob(C:\\Users\\project5587\\Desktop\\backup_jw\\Dev\\market-insight-agent\\.auto-claude/**)",
+      "Grep(C:\\Users\\project5587\\Desktop\\backup_jw\\Dev\\market-insight-agent\\.auto-claude/**)",
+      "Bash(*)",
+      "WebFetch(*)",
+      "WebSearch(*)",
+      "mcp__context7__resolve-library-id(*)",
+      "mcp__context7__get-library-docs(*)",
+      "mcp__graphiti-memory__search_nodes(*)",
+      "mcp__graphiti-memory__search_facts(*)",
+      "mcp__graphiti-memory__add_episode(*)",
+      "mcp__graphiti-memory__get_episodes(*)",
+      "mcp__graphiti-memory__get_entity_edge(*)"
+    ]
+  }
+}

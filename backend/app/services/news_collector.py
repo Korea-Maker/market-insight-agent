@@ -15,6 +15,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.core.database import AsyncSessionLocal
 from app.models.news import News
+from app.models.source import IntelligenceSource
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +25,104 @@ RSS_FEEDS = {
     "CoinTelegraph": "https://cointelegraph.com/rss",
     "Bitcoin Magazine": "https://bitcoinmagazine.com/.rss/full/",
 }
+
+# 기본 소스 정의 (데이터베이스 마이그레이션용)
+DEFAULT_SOURCES = [
+    {"name": "CoinDesk", "url": "https://www.coindesk.com/arc/outboundfeeds/rss/", "source_type": "rss"},
+    {"name": "CoinTelegraph", "url": "https://cointelegraph.com/rss", "source_type": "rss"},
+    {"name": "Bitcoin Magazine", "url": "https://bitcoinmagazine.com/.rss/full/", "source_type": "rss"},
+]
+
+
+async def ensure_default_sources():
+    """
+    하드코딩된 기본 소스를 데이터베이스에 마이그레이션
+    이미 존재하는 소스는 건너뜀 (이름 기준)
+    """
+    async with AsyncSessionLocal() as session:
+        for source_data in DEFAULT_SOURCES:
+            stmt = select(IntelligenceSource).where(IntelligenceSource.name == source_data["name"])
+            result = await session.execute(stmt)
+            if not result.scalar_one_or_none():
+                source = IntelligenceSource(**source_data)
+                session.add(source)
+                logger.info(f"기본 소스 추가: {source_data['name']}")
+        await session.commit()
+        logger.info("기본 소스 마이그레이션 완료")
+
+
+async def get_enabled_sources() -> List[Dict]:
+    """
+    데이터베이스에서 활성화된 RSS 소스 목록을 조회
+
+    Returns:
+        활성화된 소스 목록 [{"name": str, "url": str}, ...]
+    """
+    async with AsyncSessionLocal() as session:
+        stmt = select(IntelligenceSource).where(
+            IntelligenceSource.is_enabled == True,
+            IntelligenceSource.source_type == "rss"
+        )
+        result = await session.execute(stmt)
+        sources = result.scalars().all()
+
+        enabled_sources = [
+            {"name": source.name, "url": source.url}
+            for source in sources
+        ]
+
+        logger.debug(f"활성화된 RSS 소스 {len(enabled_sources)}개 조회됨")
+        return enabled_sources
+
+
+async def update_source_success(source_name: str) -> None:
+    """
+    소스 수집 성공 시 상태 업데이트
+
+    Args:
+        source_name: 소스 이름
+    """
+    async with AsyncSessionLocal() as session:
+        try:
+            stmt = select(IntelligenceSource).where(IntelligenceSource.name == source_name)
+            result = await session.execute(stmt)
+            source = result.scalar_one_or_none()
+
+            if source:
+                source.last_fetch_at = datetime.utcnow()
+                source.last_success_at = datetime.utcnow()
+                source.success_count = (source.success_count or 0) + 1
+                source.last_error = None
+                await session.commit()
+                logger.debug(f"{source_name} 소스 성공 상태 업데이트 완료")
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"{source_name} 소스 성공 상태 업데이트 실패: {e}")
+
+
+async def update_source_failure(source_name: str, error: str) -> None:
+    """
+    소스 수집 실패 시 상태 업데이트
+
+    Args:
+        source_name: 소스 이름
+        error: 오류 메시지
+    """
+    async with AsyncSessionLocal() as session:
+        try:
+            stmt = select(IntelligenceSource).where(IntelligenceSource.name == source_name)
+            result = await session.execute(stmt)
+            source = result.scalar_one_or_none()
+
+            if source:
+                source.last_fetch_at = datetime.utcnow()
+                source.failure_count = (source.failure_count or 0) + 1
+                source.last_error = str(error)[:1000]  # 오류 메시지 길이 제한
+                await session.commit()
+                logger.debug(f"{source_name} 소스 실패 상태 업데이트 완료")
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"{source_name} 소스 실패 상태 업데이트 실패: {e}")
 
 
 def parse_published_date(date_str: Optional[str]) -> Optional[datetime]:
@@ -198,31 +297,48 @@ async def collect_news():
     """
     모든 RSS 피드에서 뉴스를 수집하고 저장
     스케줄러에 의해 주기적으로 호출됨
+    데이터베이스에서 활성화된 소스를 조회하여 사용
     """
     logger.info("뉴스 수집 시작...")
-    
+
     total_collected = 0
     total_saved = 0
-    
+
+    # 데이터베이스에서 활성화된 RSS 소스 조회
+    enabled_sources = await get_enabled_sources()
+
+    if not enabled_sources:
+        logger.warning("활성화된 RSS 소스가 없습니다. 뉴스 수집을 건너뜁니다.")
+        return
+
+    logger.info(f"활성화된 RSS 소스 {len(enabled_sources)}개로 뉴스 수집 시작")
+
     # 모든 RSS 피드 순회
-    for source, url in RSS_FEEDS.items():
+    for source_info in enabled_sources:
+        source = source_info["name"]
+        url = source_info["url"]
         try:
             # RSS 피드에서 뉴스 가져오기
             news_items = await fetch_rss_feed(source, url)
             total_collected += len(news_items)
-            
+
             # 각 뉴스 항목 저장 (순차 처리 - 번역 API rate limit 고려)
             for news_item in news_items:
                 saved = await save_news_to_db(news_item)
                 if saved:
                     total_saved += 1
-                
+
                 # 번역 API rate limit 방지를 위한 짧은 대기
                 await asyncio.sleep(0.5)
-            
+
+            # 소스 수집 성공 상태 업데이트
+            await update_source_success(source)
+
         except Exception as e:
             logger.error(f"{source} 뉴스 수집 중 오류: {e}")
-    
+            # 소스 수집 실패 상태 업데이트
+            await update_source_failure(source, str(e))
+
     logger.info(f"뉴스 수집 완료: {total_collected}개 수집, {total_saved}개 새로 저장")
 
 
