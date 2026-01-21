@@ -15,6 +15,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.core.database import AsyncSessionLocal
 from app.models.news import News
+from app.models.source import IntelligenceSource
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +25,30 @@ RSS_FEEDS = {
     "CoinTelegraph": "https://cointelegraph.com/rss",
     "Bitcoin Magazine": "https://bitcoinmagazine.com/.rss/full/",
 }
+
+# 기본 소스 정의 (데이터베이스 마이그레이션용)
+DEFAULT_SOURCES = [
+    {"name": "CoinDesk", "url": "https://www.coindesk.com/arc/outboundfeeds/rss/", "source_type": "rss"},
+    {"name": "CoinTelegraph", "url": "https://cointelegraph.com/rss", "source_type": "rss"},
+    {"name": "Bitcoin Magazine", "url": "https://bitcoinmagazine.com/.rss/full/", "source_type": "rss"},
+]
+
+
+async def ensure_default_sources():
+    """
+    하드코딩된 기본 소스를 데이터베이스에 마이그레이션
+    이미 존재하는 소스는 건너뜀 (이름 기준)
+    """
+    async with AsyncSessionLocal() as session:
+        for source_data in DEFAULT_SOURCES:
+            stmt = select(IntelligenceSource).where(IntelligenceSource.name == source_data["name"])
+            result = await session.execute(stmt)
+            if not result.scalar_one_or_none():
+                source = IntelligenceSource(**source_data)
+                session.add(source)
+                logger.info(f"기본 소스 추가: {source_data['name']}")
+        await session.commit()
+        logger.info("기본 소스 마이그레이션 완료")
 
 
 def parse_published_date(date_str: Optional[str]) -> Optional[datetime]:
