@@ -19,18 +19,38 @@ from app.models.source import IntelligenceSource
 
 logger = logging.getLogger(__name__)
 
-# RSS 피드 소스 정의
+# RSS 피드 소스 정의 (테스트 완료된 암호화폐/경제 뉴스 소스)
+# 2026-01-22 기준 동작 확인된 피드만 포함
 RSS_FEEDS = {
+    # 주요 암호화폐 뉴스 (모두 테스트 완료)
     "CoinDesk": "https://www.coindesk.com/arc/outboundfeeds/rss/",
     "CoinTelegraph": "https://cointelegraph.com/rss",
-    "Bitcoin Magazine": "https://bitcoinmagazine.com/.rss/full/",
+    "Decrypt": "https://decrypt.co/feed",
+    "The Block": "https://www.theblock.co/rss.xml",
+    "CryptoSlate": "https://cryptoslate.com/feed/",
+    "NewsBTC": "https://www.newsbtc.com/feed/",
+    "Bitcoinist": "https://bitcoinist.com/feed/",
+    "U.Today": "https://u.today/rss",
+    "AMBCrypto": "https://ambcrypto.com/feed/",
+    # 일반 금융/경제 뉴스 (암호화폐 관련)
+    "Investing.com Crypto": "https://www.investing.com/rss/news_301.rss",
 }
 
 # 기본 소스 정의 (데이터베이스 마이그레이션용)
+# 테스트 완료된 10개 소스만 포함
 DEFAULT_SOURCES = [
+    # 주요 암호화폐 뉴스
     {"name": "CoinDesk", "url": "https://www.coindesk.com/arc/outboundfeeds/rss/", "source_type": "rss"},
     {"name": "CoinTelegraph", "url": "https://cointelegraph.com/rss", "source_type": "rss"},
-    {"name": "Bitcoin Magazine", "url": "https://bitcoinmagazine.com/.rss/full/", "source_type": "rss"},
+    {"name": "Decrypt", "url": "https://decrypt.co/feed", "source_type": "rss"},
+    {"name": "The Block", "url": "https://www.theblock.co/rss.xml", "source_type": "rss"},
+    {"name": "CryptoSlate", "url": "https://cryptoslate.com/feed/", "source_type": "rss"},
+    {"name": "NewsBTC", "url": "https://www.newsbtc.com/feed/", "source_type": "rss"},
+    {"name": "Bitcoinist", "url": "https://bitcoinist.com/feed/", "source_type": "rss"},
+    {"name": "U.Today", "url": "https://u.today/rss", "source_type": "rss"},
+    {"name": "AMBCrypto", "url": "https://ambcrypto.com/feed/", "source_type": "rss"},
+    # 일반 금융/경제 뉴스 (암호화폐 관련)
+    {"name": "Investing.com Crypto", "url": "https://www.investing.com/rss/news_301.rss", "source_type": "rss"},
 ]
 
 
