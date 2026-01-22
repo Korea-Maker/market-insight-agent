@@ -313,16 +313,73 @@ async def save_news_to_db(news_item: Dict) -> bool:
             return False
 
 
+async def process_single_source(source_info: Dict, semaphore: asyncio.Semaphore) -> tuple[int, int]:
+    """
+    단일 RSS 소스에서 뉴스를 수집하고 저장 (병렬 처리용)
+
+    Args:
+        source_info: 소스 정보 딕셔너리 {"name": str, "url": str}
+        semaphore: 번역 API rate limit 관리용 세마포어
+
+    Returns:
+        (수집된 뉴스 수, 저장된 뉴스 수) 튜플
+    """
+    source = source_info["name"]
+    url = source_info["url"]
+    collected = 0
+    saved = 0
+
+    try:
+        # RSS 피드에서 뉴스 가져오기
+        news_items = await fetch_rss_feed(source, url)
+        collected = len(news_items)
+
+        # 각 뉴스 항목 병렬 저장 (세마포어로 동시 번역 수 제한)
+        save_tasks = []
+        for news_item in news_items:
+            save_tasks.append(save_news_with_semaphore(news_item, semaphore))
+
+        # 모든 저장 작업 병렬 실행
+        results = await asyncio.gather(*save_tasks, return_exceptions=True)
+        saved = sum(1 for r in results if r is True)
+
+        # 소스 수집 성공 상태 업데이트
+        await update_source_success(source)
+        logger.info(f"{source}: {collected}개 수집, {saved}개 저장")
+
+    except Exception as e:
+        logger.error(f"{source} 뉴스 수집 중 오류: {e}")
+        # 소스 수집 실패 상태 업데이트
+        await update_source_failure(source, str(e))
+
+    return collected, saved
+
+
+async def save_news_with_semaphore(news_item: Dict, semaphore: asyncio.Semaphore) -> bool:
+    """
+    세마포어를 사용하여 뉴스를 저장 (번역 API rate limit 관리)
+
+    Args:
+        news_item: 뉴스 항목 딕셔너리
+        semaphore: 동시 실행 수 제한용 세마포어
+
+    Returns:
+        저장 성공 여부
+    """
+    async with semaphore:
+        result = await save_news_to_db(news_item)
+        # 번역 API rate limit 방지를 위한 짧은 대기
+        await asyncio.sleep(0.3)
+        return result
+
+
 async def collect_news():
     """
-    모든 RSS 피드에서 뉴스를 수집하고 저장
+    모든 RSS 피드에서 뉴스를 수집하고 저장 (병렬 처리)
     스케줄러에 의해 주기적으로 호출됨
     데이터베이스에서 활성화된 소스를 조회하여 사용
     """
     logger.info("뉴스 수집 시작...")
-
-    total_collected = 0
-    total_saved = 0
 
     # 데이터베이스에서 활성화된 RSS 소스 조회
     enabled_sources = await get_enabled_sources()
@@ -333,31 +390,23 @@ async def collect_news():
 
     logger.info(f"활성화된 RSS 소스 {len(enabled_sources)}개로 뉴스 수집 시작")
 
-    # 모든 RSS 피드 순회
-    for source_info in enabled_sources:
-        source = source_info["name"]
-        url = source_info["url"]
-        try:
-            # RSS 피드에서 뉴스 가져오기
-            news_items = await fetch_rss_feed(source, url)
-            total_collected += len(news_items)
+    # 번역 API rate limit 관리용 세마포어 (동시 최대 5개 번역)
+    semaphore = asyncio.Semaphore(5)
 
-            # 각 뉴스 항목 저장 (순차 처리 - 번역 API rate limit 고려)
-            for news_item in news_items:
-                saved = await save_news_to_db(news_item)
-                if saved:
-                    total_saved += 1
+    # 모든 RSS 소스를 병렬로 처리
+    tasks = [process_single_source(source_info, semaphore) for source_info in enabled_sources]
+    results = await asyncio.gather(*tasks, return_exceptions=True)
 
-                # 번역 API rate limit 방지를 위한 짧은 대기
-                await asyncio.sleep(0.5)
-
-            # 소스 수집 성공 상태 업데이트
-            await update_source_success(source)
-
-        except Exception as e:
-            logger.error(f"{source} 뉴스 수집 중 오류: {e}")
-            # 소스 수집 실패 상태 업데이트
-            await update_source_failure(source, str(e))
+    # 결과 집계
+    total_collected = 0
+    total_saved = 0
+    for result in results:
+        if isinstance(result, tuple):
+            collected, saved = result
+            total_collected += collected
+            total_saved += saved
+        elif isinstance(result, Exception):
+            logger.error(f"소스 처리 중 예외 발생: {result}")
 
     logger.info(f"뉴스 수집 완료: {total_collected}개 수집, {total_saved}개 새로 저장")
 
