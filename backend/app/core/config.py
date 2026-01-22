@@ -51,6 +51,9 @@ class Settings(BaseSettings):
     # Frontend URL (OAuth 콜백 후 리다이렉트)
     FRONTEND_URL: str = "http://localhost:3000"
 
+    # Anthropic API 설정 (시장 분석용, 선택적)
+    ANTHROPIC_API_KEY: str = ""
+
     class Config:
         env_file = ".env"
         case_sensitive = True

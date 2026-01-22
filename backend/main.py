@@ -11,7 +11,7 @@ from contextlib import asynccontextmanager
 
 from app.core.config import settings
 from app.core.database import init_db, close_db
-from app.routers import ws, candles, news, auth, users, posts, comments, sources
+from app.routers import ws, candles, news, auth, users, posts, comments, sources, analysis
 
 # 로깅 설정
 logging.basicConfig(
@@ -122,6 +122,7 @@ app.include_router(ws.router)
 app.include_router(candles.router)
 app.include_router(news.router)
 app.include_router(sources.router)
+app.include_router(analysis.router)
 
 # 커뮤니티 라우터
 app.include_router(auth.router)
