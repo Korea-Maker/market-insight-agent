@@ -22,7 +22,17 @@
       "Bash(./node_modules/.bin/tsc:*)",
       "Bash(taskkill:*)",
       "Bash(tasklist:*)",
-      "Bash(python -c \"from app.models import *; print\\(''Models OK''\\)\")"
+      "Bash(python -c \"from app.models import *; print\\(''Models OK''\\)\")",
+      "Bash(python -c:*)",
+      "Bash(.venvScriptsactivate)",
+      "Bash(.venvScriptspython.exe -c \"from app.models.source import IntelligenceSource; print\\(''IntelligenceSource model imported successfully''\\)\")",
+      "Bash(venv/Scripts/python.exe:*)",
+      "Bash(venv/Scripts/pip.exe install:*)",
+      "Bash(venv/Scripts/pip.exe:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git pull:*)",
+      "Bash(git stash:*)"
     ]
   },
   "spinnerTipsEnabled": true
