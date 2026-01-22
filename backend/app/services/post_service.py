@@ -109,6 +109,9 @@ class PostService:
         if post and increment_view:
             post.view_count += 1
             await db.commit()
+            # commit 후 전체 객체 및 관계 다시 로드 (MissingGreenlet 에러 방지)
+            await db.refresh(post)
+            await db.refresh(post, ["author", "tags"])
 
         return post
 
