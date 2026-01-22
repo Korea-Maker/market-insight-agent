@@ -86,6 +86,9 @@ class PostService:
         await db.commit()
         await db.refresh(post)
 
+        # author, tags 관계 명시적 로드
+        await db.refresh(post, ["author", "tags"])
+
         logger.info(f"게시글 생성: {post.id} by user {author_id}")
         return post
 
@@ -231,6 +234,9 @@ class PostService:
 
         await db.commit()
         await db.refresh(post)
+
+        # author, tags 관계 명시적 로드
+        await db.refresh(post, ["author", "tags"])
 
         logger.info(f"게시글 수정: {post.id}")
         return post
