@@ -220,9 +220,12 @@ export function TradingChart(): React.ReactElement {
   const drawingColor = useChartStore((s) => s.drawingColor);
   const setActiveDrawingTool = useChartStore((s) => s.setActiveDrawingTool);
 
+  // Memoize RSI enabled state to prevent unnecessary recalculations
+  const hasActiveRSI = useMemo(() => showRSIPanel && rsiConfigs.some((r) => r.enabled), [showRSIPanel, rsiConfigs]);
+
   // Calculate chart heights based on enabled sub-panels
   const chartHeights = useMemo(() => {
-    const hasRSI = showRSIPanel && rsiConfigs.some((r) => r.enabled);
+    const hasRSI = hasActiveRSI;
     const hasMACD = macd.enabled;
     const hasStochastic = stochastic.enabled;
     const hasATR = atr.enabled;
@@ -245,7 +248,7 @@ export function TradingChart(): React.ReactElement {
       adx: hasADX ? `${subPanelHeight}%` : '0%',
       obv: hasOBV ? `${subPanelHeight}%` : '0%',
     };
-  }, [showRSIPanel, rsiConfigs, macd.enabled, stochastic.enabled, atr.enabled, adx.enabled, obv.enabled]);
+  }, [hasActiveRSI, macd.enabled, stochastic.enabled, atr.enabled, adx.enabled, obv.enabled]);
 
   // Create sub-chart (RSI or MACD)
   const createSubChart = useCallback((container: HTMLDivElement, showTimeScale = false): IChartApi => {
@@ -636,7 +639,72 @@ export function TradingChart(): React.ReactElement {
     }
   }, [bollingerBands, vwap, supertrend, emaRibbon, parabolicSAR]);
 
-  // Fetch candle data
+  // Update all indicators with current candle data
+  const updateAllIndicators = useCallback((candles: CandleData[]) => {
+    if (candles.length === 0) return;
+
+    // Update MAs
+    updateMASeries(candles, movingAverages);
+
+    // Update Ichimoku
+    updateIchimokuSeries(candles);
+
+    // Update overlay indicators (BB, VWAP, Supertrend, EMA Ribbon, SAR)
+    updateOverlayIndicators(candles);
+
+    // Update RSI
+    if (subChartsRef.current.rsiChart && rsiConfigs.some((r) => r.enabled)) {
+      rsiConfigs.forEach((config) => {
+        if (!config.enabled) return;
+
+        const existingRef = subChartsRef.current.rsiSeries.find((r) => r.id === config.id);
+        const rsiData = calculateRSI(candles, config.period);
+
+        if (existingRef) {
+          existingRef.series.setData(rsiData);
+        }
+      });
+    }
+
+    // Update MACD
+    if (macd.enabled && subChartsRef.current.macdHistogram) {
+      const macdData = calculateMACD(candles, macd.fastPeriod, macd.slowPeriod, macd.signalPeriod);
+      subChartsRef.current.macdHistogram.setData(macdData.histogram);
+      subChartsRef.current.macdSignal?.setData(macdData.signal);
+      subChartsRef.current.macdLine?.setData(macdData.macd);
+    }
+
+    // Update Stochastic
+    if (stochastic.enabled && subChartsRef.current.stochasticChart) {
+      const stochData = calculateStochastic(candles, stochastic.kPeriod, stochastic.dPeriod, stochastic.smooth);
+      subChartsRef.current.stochasticK?.setData(stochData.k);
+      subChartsRef.current.stochasticD?.setData(stochData.d);
+    }
+
+    // Update ATR
+    if (atr.enabled && subChartsRef.current.atrChart) {
+      const atrData = calculateATR(candles, atr.period);
+      subChartsRef.current.atrSeries?.setData(atrData);
+    }
+
+    // Update ADX
+    if (adx.enabled && subChartsRef.current.adxChart) {
+      const adxData = calculateADX(candles, adx.period);
+      subChartsRef.current.adxSeries?.setData(adxData.adx);
+      if (adx.showDI) {
+        subChartsRef.current.plusDISeries?.setData(adxData.plusDI);
+        subChartsRef.current.minusDISeries?.setData(adxData.minusDI);
+      }
+    }
+
+    // Update OBV
+    if (obv.enabled && subChartsRef.current.obvChart) {
+      const obvData = calculateOBV(candles);
+      subChartsRef.current.obvSeries?.setData(obvData);
+    }
+  }, [movingAverages, rsiConfigs, macd, stochastic, atr, adx, obv, updateMASeries, updateIchimokuSeries, updateOverlayIndicators]);
+
+  // Fetch candle data - only depends on symbol and interval
   const fetchCandles = useCallback(async () => {
     try {
       setLoading(true);
@@ -679,7 +747,7 @@ export function TradingChart(): React.ReactElement {
       }
 
       // Update volume
-      if (volumeSeriesRef.current && volume.enabled) {
+      if (volumeSeriesRef.current) {
         const volumeData = data.candles.map((c: OHLCData) => ({
           time: c.time as Time,
           value: c.volume,
@@ -688,70 +756,10 @@ export function TradingChart(): React.ReactElement {
         volumeSeriesRef.current.setData(volumeData);
 
         // Volume MA
-        if (volume.showMA && volumeMASeriesRef.current) {
-          const volumeMAData = calculateVolumeMA(candles, volume.maPeriod);
+        if (volumeMASeriesRef.current) {
+          const volumeMAData = calculateVolumeMA(candles, 20);
           volumeMASeriesRef.current.setData(volumeMAData);
         }
-      }
-
-      // Update MAs
-      updateMASeries(candles, movingAverages);
-
-      // Update Ichimoku
-      updateIchimokuSeries(candles);
-
-      // Update overlay indicators (BB, VWAP, Supertrend, EMA Ribbon, SAR)
-      updateOverlayIndicators(candles);
-
-      // Update RSI
-      if (subChartsRef.current.rsiChart && rsiConfigs.some((r) => r.enabled)) {
-        rsiConfigs.forEach((config) => {
-          if (!config.enabled) return;
-
-          const existingRef = subChartsRef.current.rsiSeries.find((r) => r.id === config.id);
-          const rsiData = calculateRSI(candles, config.period);
-
-          if (existingRef) {
-            existingRef.series.setData(rsiData);
-          }
-        });
-      }
-
-      // Update MACD
-      if (macd.enabled && subChartsRef.current.macdHistogram) {
-        const macdData = calculateMACD(candles, macd.fastPeriod, macd.slowPeriod, macd.signalPeriod);
-        subChartsRef.current.macdHistogram.setData(macdData.histogram);
-        subChartsRef.current.macdSignal?.setData(macdData.signal);
-        subChartsRef.current.macdLine?.setData(macdData.macd);
-      }
-
-      // Update Stochastic
-      if (stochastic.enabled && subChartsRef.current.stochasticChart) {
-        const stochData = calculateStochastic(candles, stochastic.kPeriod, stochastic.dPeriod, stochastic.smooth);
-        subChartsRef.current.stochasticK?.setData(stochData.k);
-        subChartsRef.current.stochasticD?.setData(stochData.d);
-      }
-
-      // Update ATR
-      if (atr.enabled && subChartsRef.current.atrChart) {
-        const atrData = calculateATR(candles, atr.period);
-        subChartsRef.current.atrSeries?.setData(atrData);
-      }
-
-      // Update ADX
-      if (adx.enabled && subChartsRef.current.adxChart) {
-        const adxData = calculateADX(candles, adx.period);
-        subChartsRef.current.adxSeries?.setData(adxData.adx);
-        if (adx.showDI) {
-          subChartsRef.current.plusDISeries?.setData(adxData.plusDI);
-          subChartsRef.current.minusDISeries?.setData(adxData.minusDI);
-        }
-      }
-
-      // Update OBV
-      if (obv.enabled && subChartsRef.current.obvChart) {
-        const obvData = calculateOBV(candles);
-        subChartsRef.current.obvSeries?.setData(obvData);
       }
 
       // Fit content
@@ -764,11 +772,15 @@ export function TradingChart(): React.ReactElement {
       subChartsRef.current.obvChart?.timeScale().fitContent();
 
       setLoading(false);
+
+      return candles;
     } catch (err) {
       console.error('[TradingChart] Data load error:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
+      setLoading(false);
+      return [];
     }
-  }, [symbol, interval, setLoading, setError, movingAverages, rsiConfigs, ichimoku, volume, macd, stochastic, atr, adx, obv, updateMASeries, updateIchimokuSeries, updateOverlayIndicators]);
+  }, [symbol, interval, setLoading, setError]);
 
   // Initialize main chart
   useEffect(() => {
@@ -868,7 +880,11 @@ export function TradingChart(): React.ReactElement {
     resizeObserver.observe(mainContainerRef.current);
 
     // Load initial data
-    fetchCandles();
+    fetchCandles().then((candles) => {
+      if (candles.length > 0) {
+        updateAllIndicators(candles);
+      }
+    });
 
     return () => {
       resizeObserver.disconnect();
@@ -942,7 +958,8 @@ export function TradingChart(): React.ReactElement {
       subChartsRef.current.rsiChart = null;
       subChartsRef.current.rsiSeries = [];
     };
-  }, [showRSIPanel, rsiConfigs, createSubChart]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showRSIPanel, rsiConfigs.length, createSubChart]);
 
   // Initialize MACD chart
   useEffect(() => {
@@ -1015,7 +1032,8 @@ export function TradingChart(): React.ReactElement {
       subChartsRef.current.macdSignal = null;
       subChartsRef.current.macdLine = null;
     };
-  }, [macd, createSubChart]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [macd.enabled, createSubChart]);
 
   // Initialize Stochastic chart
   useEffect(() => {
@@ -1077,7 +1095,8 @@ export function TradingChart(): React.ReactElement {
       subChartsRef.current.stochasticK = null;
       subChartsRef.current.stochasticD = null;
     };
-  }, [stochastic, createSubChart]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stochastic.enabled, createSubChart]);
 
   // Initialize ATR chart
   useEffect(() => {
@@ -1125,7 +1144,8 @@ export function TradingChart(): React.ReactElement {
       subChartsRef.current.atrChart = null;
       subChartsRef.current.atrSeries = null;
     };
-  }, [atr, createSubChart]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [atr.enabled, createSubChart]);
 
   // Initialize ADX chart
   useEffect(() => {
@@ -1198,7 +1218,8 @@ export function TradingChart(): React.ReactElement {
       subChartsRef.current.plusDISeries = null;
       subChartsRef.current.minusDISeries = null;
     };
-  }, [adx, createSubChart]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [adx.enabled, createSubChart]);
 
   // Initialize OBV chart
   useEffect(() => {
@@ -1246,34 +1267,27 @@ export function TradingChart(): React.ReactElement {
       subChartsRef.current.obvChart = null;
       subChartsRef.current.obvSeries = null;
     };
-  }, [obv, createSubChart]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [obv.enabled, createSubChart]);
 
   // Refetch on symbol/interval change
   useEffect(() => {
     if (chartRef.current) {
-      fetchCandles();
+      fetchCandles().then((candles) => {
+        if (candles.length > 0) {
+          updateAllIndicators(candles);
+        }
+      });
     }
-  }, [symbol, interval, fetchCandles]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [symbol, interval]);
 
-  // Update indicators when configs change
+  // Update all indicators when configs change (using local data, no API call)
   useEffect(() => {
-    if (candleDataRef.current.length > 0) {
-      updateMASeries(candleDataRef.current, movingAverages);
+    if (candleDataRef.current.length > 0 && chartRef.current) {
+      updateAllIndicators(candleDataRef.current);
     }
-  }, [movingAverages, updateMASeries]);
-
-  useEffect(() => {
-    if (candleDataRef.current.length > 0) {
-      updateIchimokuSeries(candleDataRef.current);
-    }
-  }, [ichimoku, updateIchimokuSeries]);
-
-  // Update overlay indicators when configs change
-  useEffect(() => {
-    if (candleDataRef.current.length > 0) {
-      updateOverlayIndicators(candleDataRef.current);
-    }
-  }, [bollingerBands, vwap, supertrend, emaRibbon, parabolicSAR, updateOverlayIndicators]);
+  }, [updateAllIndicators]);
 
   // Update volume visibility
   useEffect(() => {
@@ -1364,8 +1378,6 @@ export function TradingChart(): React.ReactElement {
 
     return () => unsubscribe();
   }, [symbol, interval]);
-
-  const hasActiveRSI = showRSIPanel && rsiConfigs.some((r) => r.enabled);
 
   return (
     <div className="w-full h-full min-h-[600px] flex flex-col bg-card rounded-xl border shadow-sm relative">

@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     CORS_ORIGINS: List[str] = [
         "http://localhost:3000",
         "http://localhost:3001",
+        "http://127.0.0.1:3000",
+        "*",
     ]
 
     # 데이터베이스 설정
@@ -50,6 +52,9 @@ class Settings(BaseSettings):
 
     # Frontend URL (OAuth 콜백 후 리다이렉트)
     FRONTEND_URL: str = "http://localhost:3000"
+
+    # OpenAI API 설정 (시장 분석용, 선택적)
+    OPENAI_API_KEY: str = ""
 
     class Config:
         env_file = ".env"

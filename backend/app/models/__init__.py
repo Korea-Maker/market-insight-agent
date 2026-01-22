@@ -6,6 +6,7 @@ from app.models.user import User, OAuthAccount
 from app.models.post import Post, PostLike, Tag, post_tags
 from app.models.comment import Comment, CommentLike
 from app.models.source import IntelligenceSource
+from app.models.market_insight import MarketInsight
 
 __all__ = [
     "News",
@@ -18,4 +19,5 @@ __all__ = [
     "Comment",
     "CommentLike",
     "IntelligenceSource",
+    "MarketInsight",
 ]

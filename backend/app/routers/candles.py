@@ -3,11 +3,15 @@
 Binance API를 통해 과거 OHLC 데이터를 제공
 """
 import logging
+import json
 from typing import Optional
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from pydantic import BaseModel
 import httpx
 from datetime import datetime
+from redis.asyncio import Redis
+
+from app.core.redis import get_redis_client
 
 logger = logging.getLogger(__name__)
 
@@ -132,21 +136,41 @@ async def get_candles(
     ),
     limit: int = Query(default=500, ge=1, le=1000, description="가져올 캔들 수 (최대 1000)"),
     end_time: Optional[int] = Query(default=None, description="종료 시간 (Unix timestamp in milliseconds)"),
+    redis: Optional[Redis] = Depends(get_redis_client),
 ):
     """
     과거 캔들 데이터 가져오기
-    
+
     Binance API를 통해 지정된 기간의 OHLC(Open, High, Low, Close) 데이터를 가져옵니다.
-    
+    Redis 캐싱을 사용하여 동일한 요청의 응답 속도를 향상시킵니다.
+
     Args:
         symbol: 거래 쌍 (기본값: BTCUSDT)
         interval: 시간 간격 (기본값: 1m)
         limit: 가져올 캔들 수 (기본값: 500, 최대: 1000)
         end_time: 종료 시간 (선택, Unix timestamp in milliseconds)
-        
+        redis: Redis 클라이언트 (자동 주입)
+
     Returns:
         캔들 데이터 리스트
     """
+    # Redis 캐시 키 생성
+    cache_key = f"candles:{symbol.upper()}:{interval}:{limit}"
+    if end_time:
+        cache_key += f":{end_time}"
+
+    # Redis 캐시 조회 (Redis가 활성화되어 있는 경우)
+    if redis:
+        try:
+            cached_data = await redis.get(cache_key)
+            if cached_data:
+                logger.info(f"캔들 데이터 캐시 히트: {cache_key}")
+                response_data = json.loads(cached_data)
+                return CandlesResponse(**response_data)
+        except Exception as e:
+            logger.warning(f"Redis 캐시 조회 실패: {e}")
+            # 캐시 실패는 무시하고 계속 진행
+
     # Binance API에서 데이터 가져오기
     binance_candles = await fetch_binance_candles(
         symbol=symbol,
@@ -158,10 +182,22 @@ async def get_candles(
     # 데이터 정규화
     candles = [parse_binance_candle(candle) for candle in binance_candles]
 
-    logger.info(f"캔들 데이터 반환: {len(candles)}개 ({symbol}, {interval})")
-
-    return CandlesResponse(
+    response = CandlesResponse(
         symbol=symbol.upper(),
         interval=interval,
         candles=candles,
     )
+
+    # Redis 캐시 저장 (60초 TTL)
+    if redis:
+        try:
+            cache_data = response.model_dump_json()
+            await redis.setex(cache_key, 60, cache_data)
+            logger.info(f"캔들 데이터 캐시 저장: {cache_key}")
+        except Exception as e:
+            logger.warning(f"Redis 캐시 저장 실패: {e}")
+            # 캐시 실패는 무시
+
+    logger.info(f"캔들 데이터 반환: {len(candles)}개 ({symbol}, {interval})")
+
+    return response
