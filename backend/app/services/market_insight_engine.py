@@ -1,8 +1,7 @@
 """
 시장 분석 엔진 서비스
-Claude API를 사용하여 시장 분석을 생성합니다.
+OpenAI GPT API를 사용하여 시장 분석을 생성합니다.
 """
-import anthropic
 import json
 import time
 import asyncio
@@ -10,6 +9,8 @@ import logging
 import re
 from typing import Dict, List, Optional
 from datetime import datetime
+
+from openai import AsyncOpenAI
 
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
@@ -23,20 +24,21 @@ logger = logging.getLogger(__name__)
 class MarketInsightEngine:
     """
     시장 분석 엔진
-    Claude API를 사용하여 시장 데이터와 뉴스를 분석하고 인사이트를 생성합니다.
+    OpenAI GPT API를 사용하여 시장 데이터와 뉴스를 분석하고 인사이트를 생성합니다.
     """
 
     def __init__(self):
         """MarketInsightEngine 초기화"""
-        # Anthropic API 키 확인
-        api_key = getattr(settings, 'ANTHROPIC_API_KEY', None)
+        # OpenAI API 키 확인
+        api_key = getattr(settings, 'OPENAI_API_KEY', None)
         if not api_key:
-            logger.warning("ANTHROPIC_API_KEY가 설정되지 않았습니다. 분석 기능이 비활성화됩니다.")
+            logger.warning("OPENAI_API_KEY가 설정되지 않았습니다. 분석 기능이 비활성화됩니다.")
             self.client = None
         else:
-            self.client = anthropic.Anthropic(api_key=api_key)
+            self.client = AsyncOpenAI(api_key=api_key)
 
-        self.model = "claude-3-5-sonnet-20241022"
+        # GPT-5.2 모델 사용
+        self.model = "gpt-5.2"
         self.market_aggregator = MarketDataAggregator()
         self.news_analyzer = NewsAnalyzer()
 
@@ -64,7 +66,8 @@ class MarketInsightEngine:
 
 주의사항:
 - 투자 조언이 아닌 참고 정보임을 인지
-- 항상 위험 관리 강조"""
+- 항상 위험 관리 강조
+- 반드시 유효한 JSON 형식으로만 응답"""
 
     def _build_analysis_prompt(
         self,
@@ -125,12 +128,12 @@ class MarketInsightEngine:
 
 {news_section}
 
-위 데이터를 종합하여 시장 분석을 JSON 형식으로 제공해주세요."""
+위 데이터를 종합하여 시장 분석을 JSON 형식으로 제공해주세요. 반드시 유효한 JSON만 출력하세요."""
 
         return prompt
 
-    def _parse_claude_response(self, response_text: str) -> dict:
-        """Claude 응답 파싱"""
+    def _parse_gpt_response(self, response_text: str) -> dict:
+        """GPT 응답 파싱"""
         try:
             # JSON 블록 추출 시도 (```json ... ``` 형식)
             json_match = re.search(r'```json\s*([\s\S]*?)\s*```', response_text)
@@ -234,7 +237,7 @@ class MarketInsightEngine:
             MarketInsight 객체 또는 None (API 키 미설정 시)
         """
         if not self.client:
-            logger.warning("Claude API 클라이언트가 초기화되지 않았습니다.")
+            logger.warning("OpenAI API 클라이언트가 초기화되지 않았습니다.")
             return None
 
         start_time = time.time()
@@ -262,22 +265,25 @@ class MarketInsightEngine:
                 except Exception as e:
                     logger.warning(f"뉴스 분석 실패 (계속 진행): {e}")
 
-            # 3. Claude API 호출
+            # 3. OpenAI GPT API 호출
             prompt = self._build_analysis_prompt(market_snapshot, news_insights)
 
-            response = self.client.messages.create(
+            response = await self.client.chat.completions.create(
                 model=self.model,
+                messages=[
+                    {"role": "system", "content": self._get_system_prompt()},
+                    {"role": "user", "content": prompt}
+                ],
                 max_tokens=1500,
                 temperature=0.3,
-                system=self._get_system_prompt(),
-                messages=[{"role": "user", "content": prompt}]
+                response_format={"type": "json_object"}  # JSON 모드 활성화
             )
 
-            response_text = response.content[0].text
-            logger.info("Claude API 응답 수신 완료")
+            response_text = response.choices[0].message.content
+            logger.info("OpenAI GPT API 응답 수신 완료")
 
             # 4. 응답 파싱
-            parsed_response = self._parse_claude_response(response_text)
+            parsed_response = self._parse_gpt_response(response_text)
 
             # 5. 처리 시간 계산
             processing_time_ms = int((time.time() - start_time) * 1000)
@@ -316,9 +322,6 @@ class MarketInsightEngine:
 
             return insight
 
-        except anthropic.APIError as e:
-            logger.error(f"Claude API 오류: {e}")
-            raise
         except Exception as e:
             logger.error(f"시장 분석 오류: {e}", exc_info=True)
             raise
@@ -334,7 +337,7 @@ async def run_market_insight_analyzer(interval_minutes: int = 5):
     engine = MarketInsightEngine()
 
     if not engine.client:
-        logger.warning("ANTHROPIC_API_KEY가 설정되지 않아 시장 분석 백그라운드 태스크를 시작하지 않습니다.")
+        logger.warning("OPENAI_API_KEY가 설정되지 않아 시장 분석 백그라운드 태스크를 시작하지 않습니다.")
         return
 
     logger.info(f"시장 분석 백그라운드 태스크 시작 (간격: {interval_minutes}분)")
