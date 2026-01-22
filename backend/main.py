@@ -3,7 +3,6 @@ QuantBoard V1 - FastAPI 백엔드 진입점
 """
 import asyncio
 import logging
-import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
@@ -11,6 +10,7 @@ from contextlib import asynccontextmanager
 
 from app.core.config import settings
 from app.core.database import init_db, close_db
+from app.core.redis import REDIS_ENABLED
 from app.routers import ws, candles, news, auth, users, posts, comments, sources, analysis
 
 # 로깅 설정
@@ -20,15 +20,14 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Redis 사용 여부 (환경변수로 제어, 기본: 비활성화)
-REDIS_ENABLED = os.getenv("REDIS_ENABLED", "false").lower() == "true"
-
 
 async def check_redis_connection() -> bool:
     """Redis 연결 가능 여부 확인"""
     try:
         from app.core.redis import get_redis_client
         client = await get_redis_client()
+        if client is None:
+            return False
         await client.ping()
         return True
     except Exception as e:

@@ -2,6 +2,7 @@
 Redis 연결 관리 모듈
 비동기 Redis 클라이언트 팩토리 및 Pub/Sub 유틸리티
 """
+import os
 import redis.asyncio as aioredis
 from typing import Optional
 import logging
@@ -14,16 +15,23 @@ logger = logging.getLogger(__name__)
 _redis_client: Optional[aioredis.Redis] = None
 _redis_pubsub: Optional[aioredis.client.PubSub] = None
 
+# Redis 활성화 여부 (환경변수에서 읽기)
+REDIS_ENABLED = os.getenv("REDIS_ENABLED", "false").lower() == "true"
 
-async def get_redis_client() -> aioredis.Redis:
+
+async def get_redis_client() -> Optional[aioredis.Redis]:
     """
     Redis 클라이언트 싱글톤 인스턴스 반환
-    
+
     Returns:
-        aioredis.Redis: 비동기 Redis 클라이언트
+        aioredis.Redis | None: 비동기 Redis 클라이언트 또는 비활성화 시 None
     """
     global _redis_client
-    
+
+    # Redis 비활성화 시 None 반환 (연결 시도하지 않음)
+    if not REDIS_ENABLED:
+        return None
+
     if _redis_client is None:
         try:
             _redis_client = aioredis.Redis(
@@ -39,24 +47,30 @@ async def get_redis_client() -> aioredis.Redis:
         except Exception as e:
             logger.error(f"Redis 연결 실패: {e}")
             raise
-    
+
     return _redis_client
 
 
-async def get_redis_pubsub() -> aioredis.client.PubSub:
+async def get_redis_pubsub() -> Optional[aioredis.client.PubSub]:
     """
     Redis Pub/Sub 클라이언트 인스턴스 반환
-    
+
     Returns:
-        aioredis.client.PubSub: 비동기 Pub/Sub 클라이언트
+        aioredis.client.PubSub | None: 비동기 Pub/Sub 클라이언트 또는 비활성화 시 None
     """
     global _redis_pubsub
-    
+
+    # Redis 비활성화 시 None 반환
+    if not REDIS_ENABLED:
+        return None
+
     if _redis_pubsub is None:
         client = await get_redis_client()
+        if client is None:
+            return None
         _redis_pubsub = client.pubsub()
         logger.info("Redis Pub/Sub 클라이언트 생성 완료")
-    
+
     return _redis_pubsub
 
 
