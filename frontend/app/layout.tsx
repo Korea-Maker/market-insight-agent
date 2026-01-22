@@ -3,6 +3,7 @@ import { Noto_Sans_KR, Outfit } from "next/font/google";
 import "./globals.css";
 import { MainLayout } from "@/components/Layout/MainLayout";
 import { ThemeProvider } from "@/components/Theme/ThemeProvider";
+import { VibeKanbanCompanion } from "@/components/DevTools/VibeKanbanCompanion";
 
 const notoSansKr = Noto_Sans_KR({
   variable: "--font-noto-sans-kr",
@@ -35,6 +36,7 @@ export default function RootLayout({
           <MainLayout>
             {children}
           </MainLayout>
+          <VibeKanbanCompanion />
         </ThemeProvider>
       </body>
     </html>
