@@ -17,6 +17,31 @@ Welcome to the QuantBoard V1 documentation. This directory contains comprehensiv
   - Request/response examples
   - Error handling
   - Client code examples (TypeScript, Python, JavaScript)
+- **[Backend API 전체 레퍼런스](./api/BACKEND_API.md)**: 모든 백엔드 API 상세 문서
+  - 인증 시스템 (JWT, OAuth)
+  - 사용자 API
+  - 게시글/댓글 API
+  - 정보 소스 API
+  - 데이터 모델 및 서비스 계층
+
+### 🖥️ Frontend Documentation
+
+- **[Components 문서](./frontend/COMPONENTS.md)**: 프론트엔드 컴포넌트 상세
+  - UI 컴포넌트 (shadcn/ui)
+  - 차트 컴포넌트 (TradingChart, CryptoChart)
+  - 인증 컴포넌트 (AuthGuard, LoginForm)
+  - 커뮤니티 컴포넌트 (PostCard, CommentSection)
+  - 의존성 그래프
+- **[Hooks 문서](./frontend/HOOKS.md)**: 커스텀 훅 상세
+  - useWebSocket (실시간 가격 데이터)
+  - 지수 백오프 재연결 로직
+  - 에러 처리 패턴
+- **[Stores 문서](./frontend/STORES.md)**: Zustand 스토어 상세
+  - usePriceStore (실시간 가격)
+  - useChartStore (차트 설정)
+  - useAuthStore (인증)
+  - useCommunityStore (커뮤니티)
+  - 성능 최적화 패턴
 
 ### 🏗️ Architecture Documentation
 

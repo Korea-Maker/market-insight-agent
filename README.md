@@ -21,8 +21,11 @@ QuantBoard V1 is a professional-grade real-time trading dashboard that aggregate
 ### Key Features
 
 - **Real-Time Price Streaming**: WebSocket-based live price updates with Redis Pub/Sub
+- **Advanced Trading Charts**: 14+ technical indicators (MA, RSI, MACD, Ichimoku, Bollinger Bands, etc.)
 - **Historical Market Data**: Binance candle data (OHLC) with flexible intervals
 - **Cryptocurrency News**: Automated collection and translation from major crypto news sources
+- **Community Platform**: Post creation, comments (nested replies), likes, and user profiles
+- **User Authentication**: JWT-based auth with OAuth support (Google, GitHub)
 - **High Performance**: Async Python backend + React 19 frontend with optimistic updates
 - **Flexible Deployment**: Optional Redis mode - works with or without real-time streaming
 - **Dark Theme Support**: Built-in dark mode for comfortable trading
@@ -316,6 +319,97 @@ GET /api/news/sources
 GET /api/news/{news_id}
 ```
 
+### Authentication API
+
+#### Register
+```http
+POST /api/auth/register
+```
+
+**Request Body:**
+```json
+{
+  "email": "user@example.com",
+  "username": "username",
+  "password": "password123",
+  "display_name": "User Name"
+}
+```
+
+#### Login
+```http
+POST /api/auth/login
+```
+
+**Request Body:**
+```json
+{
+  "email": "user@example.com",
+  "password": "password123"
+}
+```
+
+**Response:**
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIs...",
+  "refresh_token": "eyJhbGciOiJIUzI1NiIs...",
+  "token_type": "bearer",
+  "expires_in": 900,
+  "user": { ... }
+}
+```
+
+### Community API
+
+#### Get Posts
+```http
+GET /api/posts?skip=0&limit=20&category=tech&sort=latest
+```
+
+**Parameters:**
+- `skip` (integer): Number of items to skip
+- `limit` (integer): Number of items to return (1-100)
+- `category` (string, optional): Filter by category
+- `tag` (string, optional): Filter by tag
+- `sort` (string): Sort by (latest, trending, top)
+- `search` (string, optional): Search in title/content
+
+#### Create Post (Auth Required)
+```http
+POST /api/posts
+Authorization: Bearer <access_token>
+```
+
+**Request Body:**
+```json
+{
+  "title": "Post Title",
+  "content": "# Markdown content",
+  "category": "tech",
+  "tags": ["bitcoin", "analysis"]
+}
+```
+
+#### Get Comments
+```http
+GET /api/posts/{post_id}/comments
+```
+
+#### Create Comment (Auth Required)
+```http
+POST /api/posts/{post_id}/comments
+Authorization: Bearer <access_token>
+```
+
+**Request Body:**
+```json
+{
+  "content": "Comment content",
+  "parent_id": null
+}
+```
+
 ### WebSocket Endpoints
 
 #### Real-Time Prices
@@ -341,7 +435,9 @@ ws.onmessage = (event) => {
 
 **Note:** Requires `REDIS_ENABLED=true` in backend configuration.
 
-**For complete API reference, see [docs/api/README.md](./docs/api/README.md)**
+**For complete API reference, see:**
+- [docs/api/README.md](./docs/api/README.md) - Basic API documentation
+- [docs/api/BACKEND_API.md](./docs/api/BACKEND_API.md) - Full API reference (Auth, Community, Sources)
 
 ---
 
@@ -375,19 +471,32 @@ market-insight-agent/
 │   │   ├── dashboard/         # Dashboard pages
 │   │   └── news/              # News pages
 │   ├── components/            # React components
-│   │   ├── Chart/             # Chart components
+│   │   ├── Chart/             # Trading chart (14+ indicators)
 │   │   ├── Dashboard/         # Dashboard components
 │   │   ├── Layout/            # Layout components
-│   │   └── Navigation/        # Navigation components
+│   │   ├── Navigation/        # Navigation components
+│   │   ├── Auth/              # Authentication (login, register)
+│   │   ├── Community/         # Posts, comments
+│   │   ├── Theme/             # Dark/light theme
+│   │   └── ui/                # shadcn/ui components
 │   ├── hooks/                 # Custom React hooks
 │   │   └── useWebSocket.ts    # WebSocket hook with reconnection
 │   ├── store/                 # Zustand stores
-│   │   └── usePriceStore.ts   # Price state management
+│   │   ├── usePriceStore.ts   # Real-time price state
+│   │   ├── useChartStore.ts   # Chart settings (14+ indicators)
+│   │   ├── useAuthStore.ts    # Authentication state
+│   │   └── useCommunityStore.ts # Posts & comments state
 │   ├── lib/                   # Utilities
 │   └── package.json           # Node dependencies
 │
 ├── docs/                      # Documentation
 │   ├── api/                   # API documentation
+│   │   ├── README.md          # Basic API docs
+│   │   └── BACKEND_API.md     # Full API reference
+│   ├── frontend/              # Frontend documentation
+│   │   ├── COMPONENTS.md      # React components
+│   │   ├── HOOKS.md           # Custom hooks
+│   │   └── STORES.md          # Zustand stores
 │   ├── architecture/          # Architecture docs
 │   └── guides/                # Developer guides
 │
@@ -423,6 +532,17 @@ API_PORT=8000
 
 # Environment
 ENVIRONMENT=development          # development | production
+
+# JWT Configuration
+JWT_SECRET_KEY=your-secret-key   # Auto-generated if not set
+JWT_ACCESS_TOKEN_EXPIRE_MINUTES=15
+JWT_REFRESH_TOKEN_EXPIRE_DAYS=7
+
+# OAuth Configuration (Optional)
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GITHUB_CLIENT_ID=
+GITHUB_CLIENT_SECRET=
 ```
 
 ### Frontend Environment Variables

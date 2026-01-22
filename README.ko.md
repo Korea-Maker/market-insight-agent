@@ -19,8 +19,11 @@ QuantBoard V1은 Binance의 실시간 암호화폐 시장 데이터와 여러 �
 ### 주요 기능
 
 - **실시간 가격 스트리밍**: Redis Pub/Sub 기반 WebSocket 실시간 가격 업데이트
+- **고급 트레이딩 차트**: 14개 이상의 기술적 지표 (MA, RSI, MACD, Ichimoku, Bollinger Bands 등)
 - **과거 시장 데이터**: 유연한 시간 간격의 Binance 캔들 데이터 (OHLC)
 - **암호화폐 뉴스**: 주요 암호화폐 뉴스 소스에서 자동 수집 및 번역
+- **커뮤니티 플랫폼**: 게시글 작성, 댓글 (대댓글 지원), 좋아요, 사용자 프로필
+- **사용자 인증**: JWT 기반 인증 및 OAuth 지원 (Google, GitHub)
 - **고성능**: 비동기 Python 백엔드 + React 19 프론트엔드
 - **유연한 배포**: Redis 선택적 사용 - 실시간 스트리밍 유무와 관계없이 작동
 - **다크 테마 지원**: 편안한 트레이딩을 위한 내장 다크 모드
@@ -314,6 +317,97 @@ GET /api/news/sources
 GET /api/news/{news_id}
 ```
 
+### 인증 API
+
+#### 회원가입
+```http
+POST /api/auth/register
+```
+
+**요청 본문:**
+```json
+{
+  "email": "user@example.com",
+  "username": "username",
+  "password": "password123",
+  "display_name": "사용자 이름"
+}
+```
+
+#### 로그인
+```http
+POST /api/auth/login
+```
+
+**요청 본문:**
+```json
+{
+  "email": "user@example.com",
+  "password": "password123"
+}
+```
+
+**응답:**
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIs...",
+  "refresh_token": "eyJhbGciOiJIUzI1NiIs...",
+  "token_type": "bearer",
+  "expires_in": 900,
+  "user": { ... }
+}
+```
+
+### 커뮤니티 API
+
+#### 게시글 목록 조회
+```http
+GET /api/posts?skip=0&limit=20&category=tech&sort=latest
+```
+
+**매개변수:**
+- `skip` (정수): 건너뛸 항목 수
+- `limit` (정수): 반환할 항목 수 (1-100)
+- `category` (문자열, 선택): 카테고리 필터
+- `tag` (문자열, 선택): 태그 필터
+- `sort` (문자열): 정렬 방식 (latest, trending, top)
+- `search` (문자열, 선택): 제목/내용 검색
+
+#### 게시글 작성 (인증 필요)
+```http
+POST /api/posts
+Authorization: Bearer <access_token>
+```
+
+**요청 본문:**
+```json
+{
+  "title": "게시글 제목",
+  "content": "# Markdown 내용",
+  "category": "기술",
+  "tags": ["비트코인", "분석"]
+}
+```
+
+#### 댓글 목록 조회
+```http
+GET /api/posts/{post_id}/comments
+```
+
+#### 댓글 작성 (인증 필요)
+```http
+POST /api/posts/{post_id}/comments
+Authorization: Bearer <access_token>
+```
+
+**요청 본문:**
+```json
+{
+  "content": "댓글 내용",
+  "parent_id": null
+}
+```
+
 ### WebSocket 엔드포인트
 
 #### 실시간 가격
@@ -339,7 +433,9 @@ ws.onmessage = (event) => {
 
 **참고:** 백엔드 설정에서 `REDIS_ENABLED=true` 필요
 
-**전체 API 레퍼런스는 [docs/api/README.md](./docs/api/README.md)를 참조하세요.**
+**전체 API 레퍼런스:**
+- [docs/api/README.md](./docs/api/README.md) - 기본 API 문서
+- [docs/api/BACKEND_API.md](./docs/api/BACKEND_API.md) - 전체 API 레퍼런스 (인증, 커뮤니티, 소스)
 
 ---
 
@@ -373,19 +469,32 @@ market-insight-agent/
 │   │   ├── dashboard/         # 대시보드 페이지
 │   │   └── news/              # 뉴스 페이지
 │   ├── components/            # React 컴포넌트
-│   │   ├── Chart/             # 차트 컴포넌트
+│   │   ├── Chart/             # 트레이딩 차트 (14개+ 지표)
 │   │   ├── Dashboard/         # 대시보드 컴포넌트
 │   │   ├── Layout/            # 레이아웃 컴포넌트
-│   │   └── Navigation/        # 내비게이션 컴포넌트
+│   │   ├── Navigation/        # 내비게이션 컴포넌트
+│   │   ├── Auth/              # 인증 (로그인, 회원가입)
+│   │   ├── Community/         # 게시글, 댓글
+│   │   ├── Theme/             # 다크/라이트 테마
+│   │   └── ui/                # shadcn/ui 컴포넌트
 │   ├── hooks/                 # 커스텀 React 훅
 │   │   └── useWebSocket.ts    # WebSocket 훅 (재연결 기능)
 │   ├── store/                 # Zustand 스토어
-│   │   └── usePriceStore.ts   # 가격 상태 관리
+│   │   ├── usePriceStore.ts   # 실시간 가격 상태
+│   │   ├── useChartStore.ts   # 차트 설정 (14개+ 지표)
+│   │   ├── useAuthStore.ts    # 인증 상태
+│   │   └── useCommunityStore.ts # 게시글/댓글 상태
 │   ├── lib/                   # 유틸리티
 │   └── package.json           # Node 의존성
 │
 ├── docs/                      # 문서
 │   ├── api/                   # API 문서
+│   │   ├── README.md          # 기본 API 문서
+│   │   └── BACKEND_API.md     # 전체 API 레퍼런스
+│   ├── frontend/              # 프론트엔드 문서
+│   │   ├── COMPONENTS.md      # React 컴포넌트
+│   │   ├── HOOKS.md           # 커스텀 훅
+│   │   └── STORES.md          # Zustand 스토어
 │   ├── architecture/          # 아키텍처 문서
 │   └── guides/                # 개발 가이드
 │
@@ -421,6 +530,17 @@ API_PORT=8000
 
 # 환경
 ENVIRONMENT=development          # development | production
+
+# JWT 설정
+JWT_SECRET_KEY=your-secret-key   # 미설정 시 자동 생성
+JWT_ACCESS_TOKEN_EXPIRE_MINUTES=15
+JWT_REFRESH_TOKEN_EXPIRE_DAYS=7
+
+# OAuth 설정 (선택 사항)
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GITHUB_CLIENT_ID=
+GITHUB_CLIENT_SECRET=
 ```
 
 ### 프론트엔드 환경 변수
