@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
 import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
-export default function AuthCallbackPage() {
+function AuthCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { setTokens, checkAuth } = useAuthStore();
@@ -57,45 +57,66 @@ export default function AuthCallbackPage() {
   }, [searchParams, setTokens, checkAuth, router]);
 
   return (
+    <Card className="w-full max-w-md">
+      <CardContent className="pt-6">
+        <div className="flex flex-col items-center gap-4 py-8">
+          {status === 'loading' && (
+            <>
+              <Loader2 className="h-12 w-12 animate-spin text-primary" />
+              <p className="text-muted-foreground">인증 처리 중...</p>
+            </>
+          )}
+
+          {status === 'success' && (
+            <>
+              <div className="h-16 w-16 rounded-full bg-green-100 dark:bg-green-950 flex items-center justify-center">
+                <CheckCircle className="h-8 w-8 text-green-600" />
+              </div>
+              <div className="text-center space-y-2">
+                <h2 className="text-xl font-bold">{message}</h2>
+                <p className="text-muted-foreground">
+                  잠시 후 이동합니다...
+                </p>
+              </div>
+            </>
+          )}
+
+          {status === 'error' && (
+            <>
+              <div className="h-16 w-16 rounded-full bg-red-100 dark:bg-red-950 flex items-center justify-center">
+                <AlertCircle className="h-8 w-8 text-red-600" />
+              </div>
+              <div className="text-center space-y-2">
+                <h2 className="text-xl font-bold">인증 실패</h2>
+                <p className="text-muted-foreground">{message}</p>
+              </div>
+            </>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function LoadingFallback() {
+  return (
+    <Card className="w-full max-w-md">
+      <CardContent className="pt-6">
+        <div className="flex flex-col items-center gap-4 py-8">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          <p className="text-muted-foreground">로딩 중...</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+export default function AuthCallbackPage() {
+  return (
     <div className="flex min-h-[calc(100vh-200px)] items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardContent className="pt-6">
-          <div className="flex flex-col items-center gap-4 py-8">
-            {status === 'loading' && (
-              <>
-                <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                <p className="text-muted-foreground">인증 처리 중...</p>
-              </>
-            )}
-
-            {status === 'success' && (
-              <>
-                <div className="h-16 w-16 rounded-full bg-green-100 dark:bg-green-950 flex items-center justify-center">
-                  <CheckCircle className="h-8 w-8 text-green-600" />
-                </div>
-                <div className="text-center space-y-2">
-                  <h2 className="text-xl font-bold">{message}</h2>
-                  <p className="text-muted-foreground">
-                    잠시 후 이동합니다...
-                  </p>
-                </div>
-              </>
-            )}
-
-            {status === 'error' && (
-              <>
-                <div className="h-16 w-16 rounded-full bg-red-100 dark:bg-red-950 flex items-center justify-center">
-                  <AlertCircle className="h-8 w-8 text-red-600" />
-                </div>
-                <div className="text-center space-y-2">
-                  <h2 className="text-xl font-bold">인증 실패</h2>
-                  <p className="text-muted-foreground">{message}</p>
-                </div>
-              </>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      <Suspense fallback={<LoadingFallback />}>
+        <AuthCallbackContent />
+      </Suspense>
     </div>
   );
 }
