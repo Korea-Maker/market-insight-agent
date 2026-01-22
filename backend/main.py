@@ -67,7 +67,12 @@ async def lifespan(app: FastAPI):
         logger.info("Redis 비활성화됨 (REDIS_ENABLED=false)")
 
     # 뉴스 수집기 시작 (DB만 필요, Redis 불필요)
-    from app.services.news_collector import run_news_collector
+    from app.services.news_collector import run_news_collector, ensure_default_sources
+
+    # 기본 RSS 소스 마이그레이션 (데이터베이스에 추가)
+    await ensure_default_sources()
+    logger.info("기본 RSS 소스 마이그레이션 완료")
+
     news_collector_task = asyncio.create_task(run_news_collector())
     background_tasks.append(("뉴스 수집기", news_collector_task))
     logger.info("뉴스 수집기 백그라운드 태스크 시작됨")
