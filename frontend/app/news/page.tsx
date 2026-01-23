@@ -95,17 +95,26 @@ export default function NewsPage() {
     return () => clearInterval(interval);
   }, [fetchNews]);
 
-  // 날짜 포맷팅
+  // 날짜 포맷팅 (한국 시간 기준)
   const formatDate = (dateString: string | null) => {
     if (!dateString) return '날짜 없음';
 
-    const date = new Date(dateString);
+    // UTC 시간을 파싱 (백엔드에서 UTC로 저장됨)
+    let date = new Date(dateString);
+
+    // 만약 시간대 정보가 없는 경우 UTC로 간주
+    if (!dateString.includes('Z') && !dateString.includes('+') && !dateString.includes('-', 10)) {
+      date = new Date(dateString + 'Z');
+    }
+
+    // 현재 한국 시간
     const now = new Date();
     const diff = now.getTime() - date.getTime();
     const minutes = Math.floor(diff / 60000);
     const hours = Math.floor(diff / 3600000);
     const days = Math.floor(diff / 86400000);
 
+    if (minutes < 0) return '방금 전'; // 시간 동기화 오류 방지
     if (minutes < 1) return '방금 전';
     if (minutes < 60) return `${minutes}분 전`;
     if (hours < 24) return `${hours}시간 전`;
@@ -113,7 +122,8 @@ export default function NewsPage() {
     return date.toLocaleDateString('ko-KR', {
       year: 'numeric',
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
+      timeZone: 'Asia/Seoul'
     });
   };
 
@@ -235,8 +245,14 @@ export default function NewsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {filteredNews.map((item, index) => {
             const category = inferCategory(item);
-            const isRecent = item.published &&
-              (new Date().getTime() - new Date(item.published).getTime()) < 3600000; // 1시간 이내
+            // 1시간 이내 뉴스인지 확인 (UTC 시간 처리)
+            const isRecent = item.published && (() => {
+              const published = item.published;
+              const date = (!published.includes('Z') && !published.includes('+') && !published.includes('-', 10))
+                ? new Date(published + 'Z')
+                : new Date(published);
+              return (new Date().getTime() - date.getTime()) < 3600000;
+            })();
 
             return (
               <a
