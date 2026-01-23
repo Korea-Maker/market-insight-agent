@@ -12,6 +12,7 @@ from app.core.config import settings
 from app.core.database import init_db, close_db
 from app.core.redis import REDIS_ENABLED
 from app.routers import ws, candles, news, auth, users, posts, comments, sources, analysis, symbols, sentiment
+from app.routers import notifications, alerts, ws_notifications
 
 # 로깅 설정
 logging.basicConfig(
@@ -58,9 +59,19 @@ async def lifespan(app: FastAPI):
         if redis_available:
             # 다중 심볼 수집기 사용
             from app.services.multi_ingestor import run_multi_ingestor
+            from app.services.alert_checker import alert_checker
+            from app.core.database import async_session_maker
+
             ingestor_task = asyncio.create_task(run_multi_ingestor())
             background_tasks.append(("다중 심볼 데이터 수집기", ingestor_task))
             logger.info("다중 심볼 데이터 수집기 백그라운드 태스크 시작됨")
+
+            # 가격 알림 체커 시작
+            async def get_db_session():
+                return async_session_maker()
+
+            await alert_checker.start(get_db_session)
+            logger.info("가격 알림 체커 시작됨")
         else:
             logger.warning("Redis 비활성화 - 실시간 가격 스트리밍 사용 불가")
     else:
@@ -143,6 +154,8 @@ async def lifespan(app: FastAPI):
     # Redis 연결 종료 (사용 중인 경우)
     if redis_available:
         from app.core.redis import close_redis_connections
+        from app.services.alert_checker import alert_checker
+        await alert_checker.stop()
         await close_redis_connections()
 
     logger.info("애플리케이션 종료 완료")
@@ -178,6 +191,11 @@ app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(posts.router)
 app.include_router(comments.router)
+
+# 알림 시스템 라우터
+app.include_router(notifications.router)
+app.include_router(alerts.router)
+app.include_router(ws_notifications.router)
 
 
 @app.get("/health")
