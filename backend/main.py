@@ -12,7 +12,7 @@ from app.core.config import settings
 from app.core.database import init_db, close_db
 from app.core.redis import REDIS_ENABLED
 from app.routers import ws, candles, news, auth, users, posts, comments, sources, analysis, symbols, sentiment
-from app.routers import notifications, alerts, ws_notifications
+from app.routers import notifications, alerts, ws_notifications, admin
 
 # 로깅 설정
 logging.basicConfig(
@@ -196,6 +196,9 @@ app.include_router(comments.router)
 app.include_router(notifications.router)
 app.include_router(alerts.router)
 app.include_router(ws_notifications.router)
+
+# 관리자 라우터
+app.include_router(admin.router)
 
 
 @app.get("/health")

@@ -45,6 +45,15 @@ class User(Base):
     is_active = Column(Boolean, default=True, nullable=False, comment="활성 상태")
     is_verified = Column(Boolean, default=False, nullable=False, comment="이메일 인증 여부")
 
+    # 관리 관련 필드
+    role = Column(String(20), default='user', nullable=False, comment="역할 (user, moderator, admin)")
+    status = Column(String(20), default='active', nullable=False, comment="상태 (active, warned, suspended, banned)")
+    warning_count = Column(Integer, default=0, nullable=False, comment="경고 횟수")
+    suspended_until = Column(DateTime, nullable=True, comment="정지 해제 시간")
+    banned_at = Column(DateTime, nullable=True, comment="차단 시간")
+    ban_reason = Column(Text, nullable=True, comment="차단 사유")
+    last_active_at = Column(DateTime, nullable=True, comment="마지막 활동 시간")
+
     # 메타데이터
     created_at = Column(
         DateTime,

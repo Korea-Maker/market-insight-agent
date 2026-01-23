@@ -20,6 +20,7 @@ from app.models.notification_pref import (
     NotificationPreference,
     NewsSubscription,
 )
+from app.models.moderation import Report, ModerationLog, UserWarning
 
 __all__ = [
     "News",
@@ -43,4 +44,8 @@ __all__ = [
     "AlertCondition",
     "NotificationPreference",
     "NewsSubscription",
+    # Moderation system
+    "Report",
+    "ModerationLog",
+    "UserWarning",
 ]
