@@ -188,7 +188,7 @@ export interface ModerationLog {
   target_type: 'user' | 'post' | 'comment' | 'report';
   target_id: number;
   reason: string | null;
-  metadata: Record<string, unknown> | null;
+  extra_data: Record<string, unknown> | null;
   created_at: string;
 }
 

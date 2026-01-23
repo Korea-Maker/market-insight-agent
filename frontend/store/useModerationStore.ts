@@ -289,7 +289,7 @@ export const useModerationStore = create<ModerationState>((set, get) => ({
       const response = await adminApi.getPosts({
         status: postFilters.status === 'all' ? undefined : postFilters.status,
         category: postFilters.category,
-        has_reports: postFilters.has_reports,
+        has_reports: postFilters.has_reports !== undefined ? String(postFilters.has_reports) : undefined,
         search: postFilters.search,
         sort_by: postFilters.sort_by,
         sort_order: postFilters.sort_order,
@@ -358,7 +358,7 @@ export const useModerationStore = create<ModerationState>((set, get) => ({
     try {
       const response = await adminApi.getComments({
         status: commentFilters.status === 'all' ? undefined : commentFilters.status,
-        has_reports: commentFilters.has_reports,
+        has_reports: commentFilters.has_reports !== undefined ? String(commentFilters.has_reports) : undefined,
         search: commentFilters.search,
         sort_by: commentFilters.sort_by,
         sort_order: commentFilters.sort_order,

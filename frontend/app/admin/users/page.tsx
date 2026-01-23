@@ -1,12 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import {
   Users,
   Search,
-  Filter,
   Shield,
-  ShieldAlert,
   ShieldCheck,
   AlertTriangle,
   Ban,
@@ -15,7 +14,6 @@ import {
   Loader2,
   RefreshCw,
   MoreVertical,
-  Eye,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -88,9 +86,9 @@ function UserCard({
       <CardContent className="p-4">
         <div className="flex items-start gap-4">
           {/* Avatar */}
-          <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center overflow-hidden">
+          <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center overflow-hidden relative">
             {user.avatar_url ? (
-              <img src={user.avatar_url} alt={user.display_name} className="w-full h-full object-cover" />
+              <Image src={user.avatar_url} alt={user.display_name} fill className="object-cover" />
             ) : (
               <Users className="h-6 w-6 text-muted-foreground" />
             )}
@@ -409,7 +407,7 @@ export default function UsersPage() {
             <div className="flex gap-2">
               <select
                 value={userFilters.status || 'all'}
-                onChange={(e) => setUserFilters({ status: e.target.value as any })}
+                onChange={(e) => setUserFilters({ status: e.target.value as UserStatus | 'all' })}
                 className="px-3 py-2 rounded-md border border-input bg-background text-sm"
               >
                 {statusOptions.map((opt) => (
@@ -419,7 +417,7 @@ export default function UsersPage() {
 
               <select
                 value={userFilters.role || 'all'}
-                onChange={(e) => setUserFilters({ role: e.target.value as any })}
+                onChange={(e) => setUserFilters({ role: e.target.value as UserRole | 'all' })}
                 className="px-3 py-2 rounded-md border border-input bg-background text-sm"
               >
                 {roleOptions.map((opt) => (

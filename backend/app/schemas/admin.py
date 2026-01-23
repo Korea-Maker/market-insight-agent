@@ -214,7 +214,7 @@ class ModerationLogResponse(BaseModel):
     target_type: str
     target_id: int
     reason: Optional[str] = None
-    metadata: Optional[dict] = None
+    extra_data: Optional[dict] = None
     created_at: datetime
 
     class Config:

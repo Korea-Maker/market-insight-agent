@@ -271,7 +271,7 @@ export default function CommentsPage() {
 
             <select
               value={commentFilters.status || 'all'}
-              onChange={(e) => setCommentFilters({ status: e.target.value as any })}
+              onChange={(e) => setCommentFilters({ status: e.target.value as ContentStatus | 'all' })}
               className="px-3 py-2 rounded-md border border-input bg-background text-sm"
             >
               {statusOptions.map((opt) => (

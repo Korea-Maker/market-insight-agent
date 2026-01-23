@@ -6,23 +6,16 @@ import type {
   DashboardStats,
   Report,
   ReportListResponse,
-  ReportFilters,
   ReportActionRequest,
   ModerationUser,
   UserListResponse,
-  UserFilters,
   UserWarnRequest,
   UserSuspendRequest,
   UserBanRequest,
   UserRoleUpdateRequest,
-  ModerationPost,
   PostListModerationResponse,
-  PostModerationFilters,
-  ModerationComment,
   CommentListModerationResponse,
-  CommentModerationFilters,
   ContentHideRequest,
-  ModerationLog,
   ModerationLogListResponse,
   UserWarning,
 } from '@/types/moderation';
@@ -89,7 +82,7 @@ export const adminApi = {
   // ============================================
   getPosts: (params?: {
     status?: string;
-    has_reports?: boolean;
+    has_reports?: string;
     category?: string;
     search?: string;
     sort_by?: string;
@@ -112,7 +105,7 @@ export const adminApi = {
   // ============================================
   getComments: (params?: {
     status?: string;
-    has_reports?: boolean;
+    has_reports?: string;
     search?: string;
     sort_by?: string;
     sort_order?: string;

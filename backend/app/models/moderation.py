@@ -105,7 +105,7 @@ class ModerationLog(Base):
         target_type: 대상 유형 (user, post, comment, report)
         target_id: 대상 ID
         reason: 사유
-        metadata: 추가 정보 (JSON)
+        extra_data: 추가 정보 (JSON)
         created_at: 활동 시간
     """
     __tablename__ = "moderation_logs"
@@ -127,7 +127,7 @@ class ModerationLog(Base):
 
     # 상세 정보
     reason = Column(Text, nullable=True, comment="사유")
-    metadata = Column(JSON, nullable=True, comment="추가 정보")
+    extra_data = Column(JSON, nullable=True, comment="추가 정보")
 
     # 메타데이터
     created_at = Column(

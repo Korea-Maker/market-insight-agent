@@ -56,7 +56,7 @@ async def create_moderation_log(
     target_type: str,
     target_id: int,
     reason: Optional[str] = None,
-    metadata: Optional[dict] = None,
+    extra_data: Optional[dict] = None,
 ):
     """관리 로그 생성"""
     log = ModerationLog(
@@ -65,7 +65,7 @@ async def create_moderation_log(
         target_type=target_type,
         target_id=target_id,
         reason=reason,
-        metadata=metadata,
+        extra_data=extra_data,
     )
     db.add(log)
     await db.flush()

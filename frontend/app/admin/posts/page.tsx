@@ -5,7 +5,6 @@ import Link from 'next/link';
 import {
   FileText,
   Search,
-  Filter,
   Eye,
   EyeOff,
   Trash2,
@@ -23,7 +22,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useModerationStore } from '@/store/useModerationStore';
 import type { ModerationPost, ContentStatus } from '@/types/moderation';
-import { formatDistanceToNow, format } from 'date-fns';
+import { formatDistanceToNow } from 'date-fns';
 import { ko } from 'date-fns/locale';
 
 const statusConfig: Record<ContentStatus, { label: string; color: string; icon: React.ElementType }> = {
@@ -299,7 +298,7 @@ export default function PostsPage() {
 
             <select
               value={postFilters.status || 'all'}
-              onChange={(e) => setPostFilters({ status: e.target.value as any })}
+              onChange={(e) => setPostFilters({ status: e.target.value as ContentStatus | 'all' })}
               className="px-3 py-2 rounded-md border border-input bg-background text-sm"
             >
               {statusOptions.map((opt) => (

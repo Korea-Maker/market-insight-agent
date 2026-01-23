@@ -3,12 +3,10 @@
 import {
   Users,
   FileText,
-  MessageSquare,
   Flag,
   TrendingUp,
   TrendingDown,
   UserX,
-  EyeOff,
   Activity,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';

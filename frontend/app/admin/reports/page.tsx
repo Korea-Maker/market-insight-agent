@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import {
   Flag,
-  Search,
   Filter,
   AlertTriangle,
   CheckCircle,
@@ -17,7 +16,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useModerationStore } from '@/store/useModerationStore';
@@ -314,7 +313,7 @@ export default function ReportsPage() {
 
             <select
               value={reportFilters.status || 'all'}
-              onChange={(e) => setReportFilters({ status: e.target.value as any })}
+              onChange={(e) => setReportFilters({ status: e.target.value as ReportStatus | 'all' })}
               className="px-3 py-2 rounded-md border border-input bg-background text-sm"
             >
               {statusOptions.map((opt) => (
@@ -324,7 +323,7 @@ export default function ReportsPage() {
 
             <select
               value={reportFilters.priority || 'all'}
-              onChange={(e) => setReportFilters({ priority: e.target.value as any })}
+              onChange={(e) => setReportFilters({ priority: e.target.value as ReportPriority | 'all' })}
               className="px-3 py-2 rounded-md border border-input bg-background text-sm"
             >
               {priorityOptions.map((opt) => (
@@ -334,7 +333,7 @@ export default function ReportsPage() {
 
             <select
               value={reportFilters.target_type || 'all'}
-              onChange={(e) => setReportFilters({ target_type: e.target.value as any })}
+              onChange={(e) => setReportFilters({ target_type: e.target.value as ReportTargetType | 'all' })}
               className="px-3 py-2 rounded-md border border-input bg-background text-sm"
             >
               {typeOptions.map((opt) => (

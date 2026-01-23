@@ -9,7 +9,6 @@ import {
   FileText,
   MessageSquare,
   BarChart3,
-  Settings,
   Shield,
   ChevronLeft,
 } from 'lucide-react';
