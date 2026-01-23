@@ -55,6 +55,32 @@ class Settings(BaseSettings):
 
     # OpenAI API 설정 (시장 분석용, 선택적)
     OPENAI_API_KEY: str = ""
+    OPENAI_DEFAULT_MODEL: str = "gpt-4o-mini"
+
+    # Anthropic API 설정 (시장 분석용, 선택적)
+    ANTHROPIC_API_KEY: str = ""
+    ANTHROPIC_DEFAULT_MODEL: str = "claude-3-5-sonnet-20241022"
+
+    # Google AI API 설정 (향후 지원)
+    GOOGLE_AI_API_KEY: str = ""
+    GOOGLE_DEFAULT_MODEL: str = "gemini-1.5-pro"
+
+    # Azure OpenAI 설정 (향후 지원)
+    AZURE_OPENAI_API_KEY: str = ""
+    AZURE_OPENAI_ENDPOINT: str = ""
+    AZURE_OPENAI_DEPLOYMENT: str = ""
+
+    # LLM 파이프라인 설정
+    LLM_PRIMARY_PROVIDER: str = "openai"  # openai, anthropic, google, azure_openai
+    LLM_FALLBACK_ORDER: str = "openai,anthropic"  # 쉼표 구분 폴백 순서
+    LLM_MAX_RETRIES: int = 3
+    LLM_CIRCUIT_BREAKER_THRESHOLD: int = 3
+    LLM_CIRCUIT_BREAKER_RECOVERY_MINUTES: int = 5
+
+    # 시장 분석 설정
+    ANALYSIS_INTERVAL_MINUTES: int = 5
+    ANALYSIS_PROMPT_VERSION: str = "v1_basic"  # v1_basic, v2_detailed, v3_expert
+    ANALYSIS_DEFAULT_SYMBOL: str = "BTCUSDT"
 
     class Config:
         env_file = ".env"

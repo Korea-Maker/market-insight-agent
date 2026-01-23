@@ -134,45 +134,88 @@ async def get_analysis_history(
 @router.post("/trigger", response_model=AnalysisTriggerResponse)
 async def trigger_analysis(
     symbol: str = Query("BTCUSDT", description="거래 쌍 (예: BTCUSDT)"),
+    prompt_version: str = Query("v1_basic", description="프롬프트 버전 (v1_basic, v2_detailed, v3_expert)"),
     db: AsyncSession = Depends(get_db),
 ):
     """
     수동 시장 분석 트리거 (관리자용)
 
     - **symbol**: 거래 쌍 (기본값: BTCUSDT)
+    - **prompt_version**: 프롬프트 버전 (v1_basic, v2_detailed, v3_expert)
 
-    MarketInsightEngine을 호출하여 즉시 시장 분석을 수행합니다.
+    MarketInsightOrchestrator를 호출하여 즉시 시장 분석을 수행합니다.
+    다중 LLM 제공자 지원 (OpenAI, Anthropic 자동 폴백).
     분석 완료 후 생성된 insight_id를 반환합니다.
 
     **주의**: 이 엔드포인트는 관리자 전용이며, 향후 인증이 추가될 예정입니다.
     """
     try:
-        # MarketInsightEngine 임포트 및 호출
-        from app.services.market_insight_engine import MarketInsightEngine
+        from app.services.market_insight_orchestrator import (
+            MarketInsightOrchestrator,
+            AnalysisConfig,
+        )
+        from app.services.llm.prompt_engine import PromptVersion
 
-        engine = MarketInsightEngine()
-        insight = await engine.generate_insight(symbol=symbol)
+        # 프롬프트 버전 매핑
+        version_map = {
+            'v1_basic': PromptVersion.V1_BASIC,
+            'v2_detailed': PromptVersion.V2_DETAILED,
+            'v3_expert': PromptVersion.V3_EXPERT,
+        }
+        version = version_map.get(prompt_version, PromptVersion.V1_BASIC)
 
-        if insight is None:
+        config = AnalysisConfig(
+            symbol=symbol,
+            prompt_version=version,
+        )
+
+        orchestrator = MarketInsightOrchestrator()
+        result = await orchestrator.generate_insight(config)
+
+        if not result.success or result.insight is None:
+            error_msg = result.error or "분석 실패"
             raise HTTPException(
                 status_code=503,
-                detail="OPENAI_API_KEY가 설정되지 않아 AI 분석을 수행할 수 없습니다. 환경 변수를 설정해주세요."
+                detail=f"AI 분석을 수행할 수 없습니다: {error_msg}"
             )
 
-        logger.info(f"분석 트리거 성공: {symbol} (ID: {insight.id})")
+        logger.info(
+            f"분석 트리거 성공: {symbol} (ID: {result.insight.id}, "
+            f"provider: {result.provider_used})"
+        )
 
         return AnalysisTriggerResponse(
-            message="분석이 성공적으로 완료되었습니다",
-            insight_id=insight.id,
-            recommendation=insight.recommendation.value,
+            message=f"분석이 성공적으로 완료되었습니다 (provider: {result.provider_used})",
+            insight_id=result.insight.id,
+            recommendation=result.insight.recommendation.value,
         )
 
-    except ImportError:
-        logger.warning(f"분석 트리거 요청: {symbol} (MarketInsightEngine 미구현)")
-        raise HTTPException(
-            status_code=501,
-            detail="MarketInsightEngine이 아직 구현되지 않았습니다. 백그라운드 자동 분석을 사용하세요."
-        )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"분석 트리거 실패: {symbol} - {str(e)}")
         raise HTTPException(status_code=500, detail=f"분석 중 오류가 발생했습니다: {str(e)}")
+
+
+@router.get("/providers/status")
+async def get_provider_status():
+    """
+    LLM 제공자 상태 조회
+
+    현재 등록된 LLM 제공자들의 상태, 서킷 브레이커 상태, 메트릭을 반환합니다.
+    """
+    try:
+        from app.services.market_insight_orchestrator import get_orchestrator
+
+        orchestrator = await get_orchestrator()
+        status = await orchestrator.get_provider_status()
+        metrics = await orchestrator.get_metrics_summary()
+
+        return {
+            "providers": status,
+            "summary": metrics,
+        }
+
+    except Exception as e:
+        logger.error(f"제공자 상태 조회 실패: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"상태 조회 중 오류가 발생했습니다: {str(e)}")

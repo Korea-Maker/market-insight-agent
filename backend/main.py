@@ -76,11 +76,40 @@ async def lifespan(app: FastAPI):
     background_tasks.append(("뉴스 수집기", news_collector_task))
     logger.info("뉴스 수집기 백그라운드 태스크 시작됨")
 
-    # AI 시장 분석 엔진 시작 (OpenAI API 키 필요)
-    from app.services.market_insight_engine import run_market_insight_analyzer
-    market_insight_task = asyncio.create_task(run_market_insight_analyzer(interval_minutes=5))
-    background_tasks.append(("AI 시장 분석 엔진", market_insight_task))
-    logger.info("AI 시장 분석 엔진 백그라운드 태스크 시작됨")
+    # AI 시장 분석 오케스트레이터 시작 (재설계 버전 - 다중 LLM 지원)
+    from app.services.market_insight_orchestrator import (
+        run_market_insight_analyzer,
+        AnalysisConfig,
+    )
+    from app.services.llm.prompt_engine import PromptVersion
+
+    # 분석 설정 로드
+    prompt_version_str = getattr(settings, 'ANALYSIS_PROMPT_VERSION', 'v1_basic')
+    prompt_version_map = {
+        'v1_basic': PromptVersion.V1_BASIC,
+        'v2_detailed': PromptVersion.V2_DETAILED,
+        'v3_expert': PromptVersion.V3_EXPERT,
+    }
+    prompt_version = prompt_version_map.get(prompt_version_str, PromptVersion.V1_BASIC)
+
+    analysis_config = AnalysisConfig(
+        symbol=getattr(settings, 'ANALYSIS_DEFAULT_SYMBOL', 'BTCUSDT'),
+        prompt_version=prompt_version,
+        max_retries=getattr(settings, 'LLM_MAX_RETRIES', 3),
+    )
+
+    interval_minutes = getattr(settings, 'ANALYSIS_INTERVAL_MINUTES', 5)
+    market_insight_task = asyncio.create_task(
+        run_market_insight_analyzer(
+            interval_minutes=interval_minutes,
+            config=analysis_config
+        )
+    )
+    background_tasks.append(("AI 시장 분석 오케스트레이터", market_insight_task))
+    logger.info(
+        f"AI 시장 분석 오케스트레이터 시작됨 "
+        f"(간격: {interval_minutes}분, 프롬프트: {prompt_version.value})"
+    )
 
     yield
 
