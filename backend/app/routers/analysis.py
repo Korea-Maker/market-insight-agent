@@ -1,6 +1,6 @@
 """
 시장 분석 API 라우터
-AI 생성 시장 분석 결과를 조회하고 트리거하는 엔드포인트 제공
+AI 생성 시장 분석 결과를 조회하고 트리거하는 엔드포인트 제공 (v2)
 """
 import logging
 from typing import Optional
@@ -151,7 +151,13 @@ async def trigger_analysis(
         from app.services.market_insight_engine import MarketInsightEngine
 
         engine = MarketInsightEngine()
-        insight = await engine.analyze(symbol=symbol, db=db)
+        insight = await engine.generate_insight(symbol=symbol)
+
+        if insight is None:
+            raise HTTPException(
+                status_code=503,
+                detail="OPENAI_API_KEY가 설정되지 않아 AI 분석을 수행할 수 없습니다. 환경 변수를 설정해주세요."
+            )
 
         logger.info(f"분석 트리거 성공: {symbol} (ID: {insight.id})")
 

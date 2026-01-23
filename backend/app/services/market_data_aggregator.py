@@ -52,6 +52,14 @@ class MarketDataAggregator:
         self.ticker_price_url = f"{self.base_url}/ticker/price"
         self.klines_url = f"{self.base_url}/klines"
 
+    async def __aenter__(self):
+        """Async context manager 진입"""
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Async context manager 종료"""
+        pass
+
     async def get_market_snapshot(self, symbol: str = "BTCUSDT") -> MarketSnapshot:
         """
         전체 시장 스냅샷 생성

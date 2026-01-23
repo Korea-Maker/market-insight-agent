@@ -4,7 +4,7 @@
 """
 import asyncio
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy import delete
 
 from app.core.database import AsyncSessionLocal
@@ -25,7 +25,7 @@ async def cleanup_old_news(days: int = 30) -> int:
     """
     async with AsyncSessionLocal() as session:
         try:
-            cutoff_date = datetime.utcnow() - timedelta(days=days)
+            cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
 
             stmt = delete(News).where(News.created_at < cutoff_date)
             result = await session.execute(stmt)
@@ -55,7 +55,7 @@ async def run_news_cleaner(cleanup_days: int = 30):
     while True:
         try:
             # 다음 자정까지 대기 시간 계산
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc)
             next_midnight = (now + timedelta(days=1)).replace(
                 hour=0, minute=0, second=0, microsecond=0
             )
