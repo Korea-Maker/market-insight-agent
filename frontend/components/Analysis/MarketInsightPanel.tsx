@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -18,6 +17,7 @@ import {
 
 interface MarketInsightPanelProps {
   symbol?: string;
+  className?: string;
 }
 
 const recommendationConfig = {
@@ -29,69 +29,50 @@ const recommendationConfig = {
 };
 
 const riskConfig = {
-  low: { label: '낮음', color: 'bg-green-100 text-green-800' },
-  medium: { label: '중간', color: 'bg-yellow-100 text-yellow-800' },
-  high: { label: '높음', color: 'bg-orange-100 text-orange-800' },
-  very_high: { label: '매우 높음', color: 'bg-red-100 text-red-800' },
+  low: { label: '낮음', color: 'bg-green-500/20 text-green-400 border-green-500/30' },
+  medium: { label: '중간', color: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' },
+  high: { label: '높음', color: 'bg-orange-500/20 text-orange-400 border-orange-500/30' },
+  very_high: { label: '매우 높음', color: 'bg-red-500/20 text-red-400 border-red-500/30' },
 };
 
 function MarketInsightSkeleton() {
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+    <div className="h-full flex flex-col p-6">
+      <div className="flex items-center justify-between pb-4">
         <div className="flex items-center gap-2">
-          <Skeleton className="h-5 w-5 rounded" />
-          <Skeleton className="h-6 w-32" />
+          <Skeleton className="h-5 w-5 rounded bg-white/10" />
+          <Skeleton className="h-6 w-32 bg-white/10" />
         </div>
-        <Skeleton className="h-8 w-8 rounded" />
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {/* 현재 시장 상황 */}
+        <Skeleton className="h-8 w-8 rounded bg-white/10" />
+      </div>
+      <div className="flex-1 overflow-hidden space-y-4">
         <div className="space-y-3">
-          <Skeleton className="h-5 w-28" />
+          <Skeleton className="h-5 w-28 bg-white/10" />
           <div className="grid grid-cols-2 gap-4">
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full bg-white/10" />
+            <Skeleton className="h-12 w-full bg-white/10" />
           </div>
-          <Skeleton className="h-6 w-24" />
-          <Skeleton className="h-16 w-full" />
+          <Skeleton className="h-16 w-full bg-white/10" />
         </div>
-
-        {/* 가격 변동 원인 */}
         <div className="space-y-3">
-          <Skeleton className="h-5 w-28" />
-          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-5 w-28 bg-white/10" />
+          <Skeleton className="h-12 w-full bg-white/10" />
         </div>
-
-        {/* 주요 영향 뉴스 */}
-        <div className="space-y-3">
-          <Skeleton className="h-5 w-28" />
-          <div className="space-y-2">
-            <Skeleton className="h-8 w-full" />
-            <Skeleton className="h-8 w-full" />
-            <Skeleton className="h-8 w-full" />
-          </div>
-        </div>
-
-        {/* 매매 제안 */}
-        <div className="space-y-3 border-t pt-4">
-          <Skeleton className="h-5 w-24" />
+        <div className="space-y-3 border-t border-white/5 pt-4">
+          <Skeleton className="h-5 w-24 bg-white/10" />
           <div className="flex gap-2">
-            <Skeleton className="h-8 w-20" />
-            <Skeleton className="h-8 w-16" />
+            <Skeleton className="h-8 w-20 bg-white/10" />
+            <Skeleton className="h-8 w-16 bg-white/10" />
           </div>
-          <Skeleton className="h-12 w-full" />
         </div>
-
-        {/* 메타데이터 */}
-        <Skeleton className="h-4 w-48" />
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 
 export default function MarketInsightPanel({
   symbol = 'BTCUSDT',
+  className = '',
 }: MarketInsightPanelProps) {
   const [insight, setInsight] = useState<MarketInsight | null>(null);
   const [loading, setLoading] = useState(true);
@@ -125,27 +106,34 @@ export default function MarketInsightPanel({
 
   if (error && !insight) {
     return (
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <div className={`h-full flex flex-col p-6 ${className}`}>
+        <div className="flex items-center justify-between pb-4">
           <div className="flex items-center gap-2">
             <Brain className="h-5 w-5 text-muted-foreground" />
-            <CardTitle className="text-lg">AI 시장 분석</CardTitle>
+            <h3 className="text-lg font-bold font-heading">AI 시장 분석</h3>
           </div>
           <button
             onClick={fetchAnalysis}
             disabled={loading}
-            className="p-2 rounded-md hover:bg-accent transition-colors disabled:opacity-50"
+            className="p-2 rounded-xl hover:bg-white/10 transition-colors disabled:opacity-50"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-2 text-destructive">
-            <AlertTriangle className="h-4 w-4" />
-            <span className="text-sm">{error}</span>
+        </div>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-3 text-center p-4 rounded-2xl bg-red-500/10 border border-red-500/20">
+            <AlertTriangle className="h-8 w-8 text-red-400" />
+            <span className="text-sm text-red-400">{error}</span>
+            <button
+              onClick={fetchAnalysis}
+              disabled={loading}
+              className="mt-2 px-4 py-2 text-xs font-medium rounded-xl bg-white/10 hover:bg-white/20 transition-colors"
+            >
+              다시 시도
+            </button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
   }
 
@@ -174,7 +162,6 @@ export default function MarketInsightPanel({
 
   const formatDateTime = (dateString: string) => {
     return new Date(dateString).toLocaleString('ko-KR', {
-      year: 'numeric',
       month: '2-digit',
       day: '2-digit',
       hour: '2-digit',
@@ -183,42 +170,68 @@ export default function MarketInsightPanel({
   };
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+    <div className={`h-full flex flex-col ${className}`}>
+      {/* Header */}
+      <div className="flex items-center justify-between p-6 pb-4 shrink-0">
         <div className="flex items-center gap-2">
-          <Brain className="h-5 w-5 text-primary" />
-          <CardTitle className="text-lg">AI 시장 분석</CardTitle>
+          <div className="relative">
+            <div className="absolute inset-0 bg-primary/30 blur-lg animate-pulse" />
+            <div className="relative h-8 w-8 rounded-xl bg-gradient-to-br from-primary via-primary/80 to-primary/50 flex items-center justify-center">
+              <Brain className="h-4 w-4 text-white" />
+            </div>
+          </div>
+          <h3 className="text-lg font-bold font-heading">AI 분석</h3>
         </div>
         <button
           onClick={fetchAnalysis}
           disabled={loading}
-          className="p-2 rounded-md hover:bg-accent transition-colors disabled:opacity-50"
+          className="p-2 rounded-xl hover:bg-white/10 transition-colors disabled:opacity-50"
           title="새로고침"
         >
           <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
         </button>
-      </CardHeader>
-      <CardContent className="space-y-6">
+      </div>
+
+      {/* Scrollable Content */}
+      <div className="flex-1 overflow-y-auto px-6 pb-6 space-y-5 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+        {/* 매매 제안 - 가장 상단에 배치 */}
+        <div className="p-4 rounded-2xl bg-muted/20 border border-white/5 space-y-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Badge className={`${recConfig.color} text-white border-0`}>
+              {RecIcon && <RecIcon className="h-3 w-3 mr-1" />}
+              {recConfig.label}
+            </Badge>
+            <Badge className={`${riskConf.color} border`}>
+              위험도: {riskConf.label}
+            </Badge>
+          </div>
+          {insight.recommendation_reason && (
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              {insight.recommendation_reason}
+            </p>
+          )}
+        </div>
+
         {/* 현재 시장 상황 */}
         <div className="space-y-3">
-          <h4 className="text-sm font-medium text-foreground flex items-center gap-1">
-            <span>📊</span> 현재 시장 상황
+          <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            시장 현황
           </h4>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground">가격</p>
-              <p className="text-lg font-semibold text-foreground">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="p-3 rounded-xl bg-muted/20 border border-white/5 space-y-1">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">가격</p>
+              <p className="text-base font-bold font-mono tracking-tight text-foreground">
                 {formatPrice(insight.current_price)}
               </p>
             </div>
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground">24h 변동률</p>
+            <div className="p-3 rounded-xl bg-muted/20 border border-white/5 space-y-1">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">24h 변동</p>
               <p
-                className={`text-lg font-semibold ${
+                className={`text-base font-bold font-mono tracking-tight ${
                   insight.price_change_24h !== undefined
                     ? insight.price_change_24h >= 0
-                      ? 'text-green-500'
-                      : 'text-red-500'
+                      ? 'text-emerald-400'
+                      : 'text-red-400'
                     : 'text-muted-foreground'
                 }`}
               >
@@ -227,24 +240,31 @@ export default function MarketInsightPanel({
             </div>
           </div>
           {insight.market_sentiment_label && (
-            <Badge variant="secondary" className="mt-2">
-              시장 심리: {insight.market_sentiment_label}
+            <Badge variant="secondary" className="bg-white/5 border border-white/10 text-xs">
+              심리: {insight.market_sentiment_label}
               {insight.market_sentiment_score !== undefined &&
                 ` (${insight.market_sentiment_score.toFixed(0)})`}
             </Badge>
           )}
-          <p className="text-sm text-muted-foreground leading-relaxed">
+        </div>
+
+        {/* AI 분석 요약 */}
+        <div className="space-y-2">
+          <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            분석 요약
+          </h4>
+          <p className="text-sm text-foreground/80 leading-relaxed">
             {insight.analysis_summary}
           </p>
         </div>
 
         {/* 가격 변동 원인 */}
         {insight.price_change_reason && (
-          <div className="space-y-3">
-            <h4 className="text-sm font-medium text-foreground flex items-center gap-1">
-              <span>🔍</span> 가격 변동 원인
+          <div className="space-y-2">
+            <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              변동 원인
             </h4>
-            <p className="text-sm text-muted-foreground leading-relaxed">
+            <p className="text-sm text-foreground/80 leading-relaxed">
               {insight.price_change_reason}
             </p>
           </div>
@@ -252,64 +272,40 @@ export default function MarketInsightPanel({
 
         {/* 주요 영향 뉴스 */}
         {insight.related_news && insight.related_news.length > 0 && (
-          <div className="space-y-3">
-            <h4 className="text-sm font-medium text-foreground flex items-center gap-1">
-              <span>📰</span> 주요 영향 뉴스
+          <div className="space-y-2">
+            <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              관련 뉴스
             </h4>
             <div className="space-y-2">
               {insight.related_news.slice(0, 3).map((news) => (
                 <div
                   key={news.id}
-                  className="flex items-start gap-2 text-sm p-2 rounded-md bg-accent/50"
+                  className="p-2 rounded-xl bg-muted/10 border border-white/5 hover:bg-muted/20 transition-colors"
                 >
-                  <span className="text-muted-foreground shrink-0">•</span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-foreground truncate">
-                      {news.title_kr || news.title}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {news.source}
-                      {news.published && ` · ${new Date(news.published).toLocaleDateString('ko-KR')}`}
-                    </p>
-                  </div>
+                  <p className="text-xs text-foreground/90 line-clamp-2">
+                    {news.title_kr || news.title}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    {news.source}
+                    {news.published && ` · ${new Date(news.published).toLocaleDateString('ko-KR')}`}
+                  </p>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* 매매 제안 */}
-        <div className="space-y-3 border-t pt-4">
-          <h4 className="text-sm font-medium text-foreground flex items-center gap-1">
-            <span>💰</span> 매매 제안
-          </h4>
-          <div className="flex items-center gap-2 flex-wrap">
-            <Badge className={`${recConfig.color} text-white`}>
-              {RecIcon && <RecIcon className="h-3 w-3 mr-1" />}
-              {recConfig.label}
-            </Badge>
-            <Badge className={riskConf.color}>
-              위험도: {riskConf.label}
-            </Badge>
-          </div>
-          {insight.recommendation_reason && (
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              {insight.recommendation_reason}
-            </p>
-          )}
-        </div>
-
         {/* 메타데이터 */}
-        <div className="text-xs text-muted-foreground pt-2">
-          <p>
+        <div className="pt-2 border-t border-white/5">
+          <p className="text-[10px] text-muted-foreground font-mono">
             업데이트: {formatDateTime(insight.created_at)}
             {insight.processing_time_ms !== undefined && (
-              <span> · 처리 시간: {insight.processing_time_ms}ms</span>
+              <span> · {insight.processing_time_ms}ms</span>
             )}
-            {insight.ai_model && <span> · 모델: {insight.ai_model}</span>}
+            {insight.ai_model && <span> · {insight.ai_model}</span>}
           </p>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
