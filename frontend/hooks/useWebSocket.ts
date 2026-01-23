@@ -16,22 +16,37 @@ interface UseWebSocketOptions {
 }
 
 /**
+ * Get the WebSocket URL based on environment configuration
+ * Handles protocol switching (ws/wss) based on the API URL scheme
+ */
+function getDefaultWebSocketUrl(): string {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
+  // Convert HTTP URL to WebSocket URL
+  const wsProtocol = apiUrl.startsWith('https://') ? 'wss://' : 'ws://';
+  const host = apiUrl.replace(/^https?:\/\//, '');
+
+  return `${wsProtocol}${host}/ws/prices`;
+}
+
+/**
  * WebSocket hook for connecting to FastAPI backend
- * 
+ *
  * @param options - Configuration options
- * @param options.url - WebSocket URL (default: ws://localhost:8000/ws/prices)
+ * @param options.url - WebSocket URL (default: derived from NEXT_PUBLIC_API_URL)
  * @param options.reconnect - Enable auto-reconnect (default: true)
  * @param options.maxReconnectAttempts - Maximum reconnect attempts (default: Infinity)
  * @param options.reconnectInterval - Initial reconnect interval in ms (default: 1000)
- * 
+ *
  * @example
  * ```tsx
- * useWebSocket({ url: 'ws://localhost:8000/ws/prices' });
+ * useWebSocket(); // Uses NEXT_PUBLIC_API_URL environment variable
+ * useWebSocket({ url: 'ws://localhost:8000/ws/prices' }); // Custom URL
  * ```
  */
 export function useWebSocket(options: UseWebSocketOptions = {}) {
   const {
-    url = 'ws://localhost:8000/ws/prices',
+    url = getDefaultWebSocketUrl(),
     reconnect = true,
     maxReconnectAttempts = Infinity,
     reconnectInterval = 1000,
