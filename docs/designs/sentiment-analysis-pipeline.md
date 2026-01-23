@@ -800,22 +800,22 @@ class Settings(BaseSettings):
 
 ## 8. 구현 우선순위
 
-### Phase 1: MVP (1-2주)
+### Phase 1: MVP (완료)
 1. ✅ SentimentAnalyzer (FinBERT 기본 구현)
 2. ✅ NewsSentiment 모델 및 마이그레이션
 3. ✅ 기본 API 엔드포인트 (`/api/sentiment/news/{id}`)
 4. ✅ 백그라운드 워커 (배치 처리)
 
-### Phase 2: 고도화 (2-3주)
-1. ⬜ TextPreprocessor 금융 도메인 최적화
-2. ⬜ SentimentAggregator 가중 평균 로직
-3. ⬜ Redis 캐싱 레이어
-4. ⬜ 집계 API (`/api/sentiment/aggregated`)
+### Phase 2: 고도화 (완료)
+1. ✅ TextPreprocessor 금융 도메인 최적화
+2. ✅ SentimentAggregator 가중 평균 로직
+3. ✅ LRU 캐싱 레이어 (in-memory)
+4. ✅ 집계 API (`/api/sentiment/aggregated`)
 
-### Phase 3: 확장 (3-4주)
+### Phase 3: 확장 (진행 예정)
 1. ⬜ 소셜 미디어 소스 통합 (Twitter, Reddit)
-2. ⬜ SentimentSnapshot 시계열 저장
-3. ⬜ 트렌드 분석 및 모멘텀 계산
+2. ✅ SentimentSnapshot 시계열 저장
+3. ✅ 트렌드 분석 및 모멘텀 계산
 4. ⬜ 프론트엔드 감성 대시보드
 
 ---

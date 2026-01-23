@@ -7,6 +7,8 @@ from app.models.post import Post, PostLike, Tag, post_tags
 from app.models.comment import Comment, CommentLike
 from app.models.source import IntelligenceSource
 from app.models.market_insight import MarketInsight
+from app.models.news_sentiment import NewsSentiment
+from app.models.sentiment_snapshot import SentimentSnapshot
 
 __all__ = [
     "News",
@@ -20,4 +22,6 @@ __all__ = [
     "CommentLike",
     "IntelligenceSource",
     "MarketInsight",
+    "NewsSentiment",
+    "SentimentSnapshot",
 ]
