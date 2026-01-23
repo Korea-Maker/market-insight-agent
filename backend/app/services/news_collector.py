@@ -220,8 +220,8 @@ async def fetch_rss_feed(source: str, url: str) -> List[Dict]:
         뉴스 항목 리스트
     """
     try:
-        # httpx로 RSS 피드 내용 가져오기 (SSL 검증 비활성화)
-        async with httpx.AsyncClient(timeout=15.0, verify=False) as client:
+        # httpx로 RSS 피드 내용 가져오기 (SSL 검증 비활성화, 리다이렉트 자동 따라가기)
+        async with httpx.AsyncClient(timeout=15.0, verify=False, follow_redirects=True) as client:
             response = await client.get(url)
             response.raise_for_status()
             content = response.text
