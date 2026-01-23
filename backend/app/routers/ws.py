@@ -8,7 +8,7 @@ import logging
 from typing import Set, Dict, Any
 from fastapi import WebSocket, WebSocketDisconnect, APIRouter
 
-from app.core.redis import get_redis_pubsub
+from app.core.redis import get_redis_pubsub, REDIS_ENABLED
 
 logger = logging.getLogger(__name__)
 
@@ -100,13 +100,20 @@ class ConnectionManager:
         """Redis 채널 구독 시작"""
         if self.running:
             return
-        
+
         try:
             self.running = True
             pubsub = await get_redis_pubsub()
+
+            # Redis 비활성화 시 조기 종료
+            if pubsub is None:
+                logger.warning("Redis 비활성화됨 - 실시간 가격 스트리밍 불가")
+                self.running = False
+                return
+
             await pubsub.subscribe(REDIS_CHANNEL)
             logger.info(f"Redis 채널 구독 시작: {REDIS_CHANNEL}")
-            
+
             # 백그라운드 태스크로 메시지 수신 루프 시작
             self.subscribe_task = asyncio.create_task(self._redis_message_loop(pubsub))
         except Exception as e:
@@ -184,12 +191,23 @@ manager = ConnectionManager()
 async def websocket_prices(websocket: WebSocket) -> None:
     """
     실시간 가격 데이터 WebSocket 엔드포인트
-    
+
     클라이언트가 연결되면 Redis의 live_prices 채널에서
     실시간 거래 데이터를 수신하여 브로드캐스트합니다.
     """
+    # Redis 비활성화 시 연결 거부 및 상태 전송
+    if not REDIS_ENABLED:
+        await websocket.accept()
+        await websocket.send_json({
+            "type": "error",
+            "code": "REDIS_DISABLED",
+            "message": "실시간 가격 스트리밍이 비활성화되어 있습니다. REDIS_ENABLED=true로 설정하세요."
+        })
+        await websocket.close(code=1000, reason="Redis disabled")
+        return
+
     await manager.connect(websocket)
-    
+
     try:
         # 연결 유지 및 클라이언트 메시지 수신 대기
         # 서버에서 클라이언트로만 데이터를 전송하므로,

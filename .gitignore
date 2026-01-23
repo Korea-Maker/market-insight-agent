@@ -1,11 +1,30 @@
 # Environment variables
 .env
+.env.*
+!.env.example
+!.env.sample
 .env.local
 .env*.local
+*.env
+
+# Secrets and credentials
+*.secret
+*.secrets
+secrets/
+credentials/
+*.credentials
+**/secrets.json
+**/credentials.json
+**/*secret*.json
+**/*credential*.json
 
 # OS files
 .DS_Store
 Thumbs.db
+Desktop.ini
+ehthumbs.db
+nul
+NUL
 
 # IDE
 .vscode/
@@ -68,6 +87,7 @@ assets/
 
 # Auto Claude data directory
 .auto-claude/
+.auto-claude*
 
 # Auto Claude generated files
 .auto-claude-security.json
@@ -77,4 +97,14 @@ assets/
 .security-key
 logs/security/
 
+# Playwright MCP
 .playwright-mcp/
+*.playwright-mcp/
+
+# API Keys and tokens (safety catch-all)
+*api_key*
+*apikey*
+*API_KEY*
+*APIKEY*
+*.key
+!package-lock.json

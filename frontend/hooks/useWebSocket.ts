@@ -88,11 +88,22 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
       // Message received
       ws.onmessage = (event) => {
         try {
-          const data: TradeData = JSON.parse(event.data);
-          
-          // Validate data structure
+          const data = JSON.parse(event.data);
+
+          // Handle server error messages (e.g., Redis disabled)
+          if (data && data.type === 'error') {
+            console.warn('[WebSocket] Server error:', data.message);
+            if (data.code === 'REDIS_DISABLED') {
+              // Stop reconnection attempts for Redis disabled
+              shouldReconnectRef.current = false;
+              usePriceStore.getState().setStatus('disconnected');
+            }
+            return;
+          }
+
+          // Validate trade data structure
           if (data && typeof data.price === 'number' && data.symbol) {
-            usePriceStore.getState().updatePrice(data);
+            usePriceStore.getState().updatePrice(data as TradeData);
           } else {
             console.warn('[WebSocket] Invalid data format:', data);
           }
