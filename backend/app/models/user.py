@@ -66,6 +66,12 @@ class User(Base):
     comments = relationship("Comment", back_populates="author", cascade="all, delete-orphan")
     post_likes = relationship("PostLike", back_populates="user", cascade="all, delete-orphan")
 
+    # 알림 관련 관계
+    notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
+    price_alerts = relationship("PriceAlert", back_populates="user", cascade="all, delete-orphan")
+    notification_preferences = relationship("NotificationPreference", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    news_subscriptions = relationship("NewsSubscription", back_populates="user", cascade="all, delete-orphan")
+
     # 인덱스
     __table_args__ = (
         Index('idx_users_email', 'email'),

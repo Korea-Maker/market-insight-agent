@@ -49,6 +49,33 @@ from app.schemas.source import (
     SourceListResponse,
     SOURCE_TYPES,
 )
+from app.schemas.notification import (
+    # Notification
+    NotificationBase,
+    NotificationCreate,
+    NotificationResponse,
+    NotificationListResponse,
+    NotificationMarkReadRequest,
+    UnreadCountResponse,
+    # Price Alert
+    PriceAlertBase,
+    PriceAlertCreate,
+    PriceAlertUpdate,
+    PriceAlertResponse,
+    PriceAlertListResponse,
+    # Notification Preference
+    NotificationPreferenceBase,
+    NotificationPreferenceUpdate,
+    NotificationPreferenceResponse,
+    # News Subscription
+    NewsSubscriptionBase,
+    NewsSubscriptionCreate,
+    NewsSubscriptionUpdate,
+    NewsSubscriptionResponse,
+    NewsSubscriptionListResponse,
+    # WebSocket
+    WebSocketNotification,
+)
 
 __all__ = [
     # User
@@ -94,4 +121,29 @@ __all__ = [
     "SourceListItem",
     "SourceListResponse",
     "SOURCE_TYPES",
+    # Notification
+    "NotificationBase",
+    "NotificationCreate",
+    "NotificationResponse",
+    "NotificationListResponse",
+    "NotificationMarkReadRequest",
+    "UnreadCountResponse",
+    # Price Alert
+    "PriceAlertBase",
+    "PriceAlertCreate",
+    "PriceAlertUpdate",
+    "PriceAlertResponse",
+    "PriceAlertListResponse",
+    # Notification Preference
+    "NotificationPreferenceBase",
+    "NotificationPreferenceUpdate",
+    "NotificationPreferenceResponse",
+    # News Subscription
+    "NewsSubscriptionBase",
+    "NewsSubscriptionCreate",
+    "NewsSubscriptionUpdate",
+    "NewsSubscriptionResponse",
+    "NewsSubscriptionListResponse",
+    # WebSocket
+    "WebSocketNotification",
 ]
