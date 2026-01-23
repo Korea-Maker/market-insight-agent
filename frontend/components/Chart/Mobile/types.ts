@@ -271,7 +271,6 @@ export const MOBILE_INTERVALS: Array<{ label: string; value: TimeInterval }> = [
   { label: '1h', value: '1h' },
   { label: '4h', value: '4h' },
   { label: '1D', value: '1d' },
-  { label: '1W', value: '1w' },
 ];
 
 export const DEFAULT_GESTURE_CONFIG: GestureConfig = {

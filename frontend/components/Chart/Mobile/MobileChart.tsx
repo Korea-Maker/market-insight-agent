@@ -17,6 +17,7 @@ import {
   ColorType,
   CrosshairMode,
   Time,
+  LineWidth,
 } from 'lightweight-charts';
 import { Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -79,12 +80,12 @@ const getMobileChartOptions = (width: number, height: number) => ({
   crosshair: {
     mode: CrosshairMode.Magnet,
     vertLine: {
-      width: 1,
+      width: 1 as LineWidth,
       style: 2,
       labelVisible: true,
     },
     horzLine: {
-      width: 1,
+      width: 1 as LineWidth,
       style: 2,
       labelVisible: true,
     },

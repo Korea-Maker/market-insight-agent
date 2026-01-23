@@ -62,13 +62,20 @@ export function useOrientation() {
 
     try {
       // Map our orientation type to ScreenOrientation API types
-      const lockType: OrientationLockType =
+      const lockType =
         lockTo === 'any' ? 'any' :
         lockTo === 'portrait' ? 'portrait' : 'landscape';
 
-      await window.screen.orientation.lock(lockType);
-      setState((prev) => ({ ...prev, isLocked: true }));
-      return true;
+      // Use type assertion for lock method which may not be in all TS definitions
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const orientation = window.screen.orientation as any;
+
+      if (typeof orientation.lock === 'function') {
+        await orientation.lock(lockType);
+        setState((prev) => ({ ...prev, isLocked: true }));
+        return true;
+      }
+      return false;
     } catch {
       // Orientation lock not supported or denied
       return false;
