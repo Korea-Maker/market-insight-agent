@@ -67,7 +67,7 @@ class MarketInsightEngine:
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": prompt}
             ],
-            max_tokens=1500,
+            max_completion_tokens=1500,
             temperature=0.3,
             response_format={"type": "json_object"}
         )
@@ -124,10 +124,10 @@ class MarketInsightEngine:
             insight = MarketInsight(
                 symbol=symbol,
                 current_price=market_snapshot.current_price,
-                price_change_24h=market_snapshot.price_change.change_24h_pct,
-                volume_24h=market_snapshot.volume_analysis.volume_24h,
-                rsi_14=market_snapshot.technical_indicators.rsi_14,
-                volatility_24h=market_snapshot.technical_indicators.volatility_24h,
+                price_change_24h=market_snapshot.price_change_24h,
+                volume_24h=market_snapshot.volume_24h,
+                rsi_14=market_snapshot.rsi_14,
+                volatility_24h=market_snapshot.volatility_24h,
                 analysis_summary=parsed_response["summary"],
                 price_change_reason=parsed_response["price_reason"],
                 recommendation=TradingRecommendation(parsed_response["recommendation"]),

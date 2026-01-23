@@ -36,29 +36,37 @@ SYSTEM_PROMPT = """당신은 암호화폐 시장 분석 전문가입니다.
 
 def build_market_section(market: MarketSnapshot) -> str:
     """시장 데이터 섹션 생성"""
+    # Optional 값들의 기본값 처리
+    rsi_14 = market.rsi_14 if market.rsi_14 is not None else 50.0
+    macd = market.macd if market.macd is not None else 0.0
+    macd_signal = market.macd_signal if market.macd_signal is not None else 0.0
+    bb_upper = market.bb_upper if market.bb_upper is not None else market.current_price
+    bb_middle = market.bb_middle if market.bb_middle is not None else market.current_price
+    bb_lower = market.bb_lower if market.bb_lower is not None else market.current_price
+    volatility_24h = market.volatility_24h if market.volatility_24h is not None else 0.0
+
     return f"""## 시장 데이터 ({market.symbol})
 
 ### 가격 정보
 - 현재 가격: ${market.current_price:,.2f}
-- 1시간 변동률: {market.price_change.change_1h_pct:+.2f}%
-- 24시간 변동률: {market.price_change.change_24h_pct:+.2f}%
-- 7일 변동률: {market.price_change.change_7d_pct:+.2f}%
+- 1시간 변동률: {market.price_change_1h:+.2f}%
+- 24시간 변동률: {market.price_change_24h:+.2f}%
+- 7일 변동률: {market.price_change_7d:+.2f}%
 
 ### 거래량
-- 24시간 거래량: {market.volume_analysis.volume_24h:,.0f}
-- 7일 평균 대비 변화: {market.volume_analysis.volume_change_pct:+.2f}%
+- 24시간 거래량: ${market.volume_24h:,.0f}
+- 거래량 변화율: {market.volume_change_24h:+.2f}%
 
 ### 기술적 지표
-- RSI(14): {market.technical_indicators.rsi_14:.2f}
-- MACD: {market.technical_indicators.macd:.2f}
-- MACD Signal: {market.technical_indicators.macd_signal:.2f}
-- MACD Histogram: {market.technical_indicators.macd_histogram:.2f}
-- 볼린저 밴드 상단: ${market.technical_indicators.bb_upper:,.2f}
-- 볼린저 밴드 중단: ${market.technical_indicators.bb_middle:,.2f}
-- 볼린저 밴드 하단: ${market.technical_indicators.bb_lower:,.2f}
+- RSI(14): {rsi_14:.2f}
+- MACD: {macd:.2f}
+- MACD Signal: {macd_signal:.2f}
+- 볼린저 밴드 상단: ${bb_upper:,.2f}
+- 볼린저 밴드 중단: ${bb_middle:,.2f}
+- 볼린저 밴드 하단: ${bb_lower:,.2f}
 
 ### 변동성
-- 24시간 변동성: {market.technical_indicators.volatility_24h:.2f}%
+- 24시간 변동성: {volatility_24h:.2f}%
 """
 
 
