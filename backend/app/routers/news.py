@@ -31,6 +31,7 @@ class NewsResponse(BaseModel):
     published: Optional[datetime]
     source: str
     description: Optional[str]
+    description_kr: Optional[str]
     created_at: datetime
 
     class Config:

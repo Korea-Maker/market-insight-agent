@@ -285,7 +285,13 @@ async def save_news_to_db(news_item: Dict) -> bool:
             
             # 제목 번역
             title_kr = await translate_to_korean(news_item["title"])
-            
+
+            # 설명 번역 (있는 경우)
+            description = news_item.get("description")
+            description_kr = None
+            if description:
+                description_kr = await translate_to_korean(description)
+
             # 새 뉴스 생성
             news = News(
                 title=news_item["title"],
@@ -293,7 +299,8 @@ async def save_news_to_db(news_item: Dict) -> bool:
                 link=news_item["link"],
                 published=news_item.get("published"),
                 source=news_item["source"],
-                description=news_item.get("description"),
+                description=description,
+                description_kr=description_kr,
             )
             
             session.add(news)

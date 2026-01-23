@@ -29,6 +29,7 @@ interface NewsItem {
   published: string | null;
   source: string;
   description: string | null;
+  description_kr: string | null;
   created_at: string;
 }
 
@@ -94,17 +95,26 @@ export default function NewsPage() {
     return () => clearInterval(interval);
   }, [fetchNews]);
 
-  // 날짜 포맷팅
+  // 날짜 포맷팅 (한국 시간 기준)
   const formatDate = (dateString: string | null) => {
     if (!dateString) return '날짜 없음';
 
-    const date = new Date(dateString);
+    // UTC 시간을 파싱 (백엔드에서 UTC로 저장됨)
+    let date = new Date(dateString);
+
+    // 만약 시간대 정보가 없는 경우 UTC로 간주
+    if (!dateString.includes('Z') && !dateString.includes('+') && !dateString.includes('-', 10)) {
+      date = new Date(dateString + 'Z');
+    }
+
+    // 현재 한국 시간
     const now = new Date();
     const diff = now.getTime() - date.getTime();
     const minutes = Math.floor(diff / 60000);
     const hours = Math.floor(diff / 3600000);
     const days = Math.floor(diff / 86400000);
 
+    if (minutes < 0) return '방금 전'; // 시간 동기화 오류 방지
     if (minutes < 1) return '방금 전';
     if (minutes < 60) return `${minutes}분 전`;
     if (hours < 24) return `${hours}시간 전`;
@@ -112,13 +122,14 @@ export default function NewsPage() {
     return date.toLocaleDateString('ko-KR', {
       year: 'numeric',
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
+      timeZone: 'Asia/Seoul'
     });
   };
 
   // 제목에서 카테고리 추론 (간단한 키워드 기반)
-  const inferCategory = (title: string, description: string | null): string => {
-    const text = `${title} ${description || ''}`.toLowerCase();
+  const inferCategory = (item: NewsItem): string => {
+    const text = `${item.title_kr || item.title} ${item.description_kr || item.description || ''}`.toLowerCase();
 
     if (text.includes('sec') || text.includes('regulation') || text.includes('law') ||
       text.includes('규제') || text.includes('법') || text.includes('정책')) {
@@ -134,7 +145,7 @@ export default function NewsPage() {
   // 필터링된 뉴스
   const filteredNews = news.filter(item => {
     if (activeFilter === 'all') return true;
-    return inferCategory(item.title, item.description) === activeFilter;
+    return inferCategory(item) === activeFilter;
   });
 
   // 소스별 그라디언트 색상 가져오기
@@ -233,9 +244,15 @@ export default function NewsPage() {
       {!loading && !error && (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {filteredNews.map((item, index) => {
-            const category = inferCategory(item.title, item.description);
-            const isRecent = item.published &&
-              (new Date().getTime() - new Date(item.published).getTime()) < 3600000; // 1시간 이내
+            const category = inferCategory(item);
+            // 1시간 이내 뉴스인지 확인 (UTC 시간 처리)
+            const isRecent = item.published && (() => {
+              const published = item.published;
+              const date = (!published.includes('Z') && !published.includes('+') && !published.includes('-', 10))
+                ? new Date(published + 'Z')
+                : new Date(published);
+              return (new Date().getTime() - date.getTime()) < 3600000;
+            })();
 
             return (
               <a
@@ -298,9 +315,9 @@ export default function NewsPage() {
                     </div>
 
                     {/* Description */}
-                    {item.description && (
+                    {(item.description_kr || item.description) && (
                       <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
-                        {item.description}
+                        {item.description_kr || item.description}
                       </p>
                     )}
 
