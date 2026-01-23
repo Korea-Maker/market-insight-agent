@@ -6,143 +6,82 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { INDICATOR_COLORS, generateIndicatorColor } from '@/lib/indicators';
 
-export type TimeInterval = '1m' | '5m' | '15m' | '1h' | '4h' | '1d';
+// Import types and defaults from chart module
+import {
+  TimeInterval,
+  MovingAverageConfig,
+  RSIConfig,
+  IchimokuConfig,
+  VolumeConfig,
+  MACDConfig,
+  BollingerBandsConfig,
+  StochasticConfig,
+  ATRConfig,
+  VWAPConfig,
+  SupertrendConfig,
+  ADXConfig,
+  OBVConfig,
+  ParabolicSARConfig,
+  EMARibbonConfig,
+  DrawingToolType,
+  DrawingObject,
+} from './chart/types';
 
-// Custom MA/EMA configuration
-export interface MovingAverageConfig {
-  id: string;
-  period: number;
-  type: 'sma' | 'ema';
-  color: string;
-  enabled: boolean;
-  lineWidth: number;
-}
+import {
+  generateId,
+  DEFAULT_MOVING_AVERAGES,
+  DEFAULT_RSI_CONFIGS,
+  DEFAULT_ICHIMOKU,
+  DEFAULT_VOLUME,
+  DEFAULT_MACD,
+  DEFAULT_BOLLINGER_BANDS,
+  DEFAULT_STOCHASTIC,
+  DEFAULT_ATR,
+  DEFAULT_VWAP,
+  DEFAULT_SUPERTREND,
+  DEFAULT_ADX,
+  DEFAULT_OBV,
+  DEFAULT_PARABOLIC_SAR,
+  DEFAULT_EMA_RIBBON,
+} from './chart/defaults';
 
-// RSI configuration
-export interface RSIConfig {
-  id: string;
-  period: number;
-  color: string;
-  enabled: boolean;
-  overbought: number;
-  oversold: number;
-}
+// Re-export types for backward compatibility
+export type {
+  TimeInterval,
+  MovingAverageConfig,
+  RSIConfig,
+  IchimokuConfig,
+  VolumeConfig,
+  MACDConfig,
+  BollingerBandsConfig,
+  StochasticConfig,
+  ATRConfig,
+  VWAPConfig,
+  SupertrendConfig,
+  ADXConfig,
+  OBVConfig,
+  ParabolicSARConfig,
+  EMARibbonConfig,
+  DrawingToolType,
+  DrawingObject,
+};
 
-// Ichimoku configuration
-export interface IchimokuConfig {
-  enabled: boolean;
-  tenkanPeriod: number;
-  kijunPeriod: number;
-  senkouBPeriod: number;
-  displacement: number;
-  showTenkan: boolean;
-  showKijun: boolean;
-  showSenkouA: boolean;
-  showSenkouB: boolean;
-  showChikou: boolean;
-  showCloud: boolean;
-}
+// Indicator state keys that have enabled/update/toggle pattern
+type IndicatorKey =
+  | 'ichimoku'
+  | 'volume'
+  | 'macd'
+  | 'bollingerBands'
+  | 'stochastic'
+  | 'atr'
+  | 'vwap'
+  | 'supertrend'
+  | 'adx'
+  | 'obv'
+  | 'parabolicSAR'
+  | 'emaRibbon';
 
-// Volume configuration
-export interface VolumeConfig {
-  enabled: boolean;
-  showMA: boolean;
-  maPeriod: number;
-  maColor: string;
-}
-
-// MACD configuration
-export interface MACDConfig {
-  enabled: boolean;
-  fastPeriod: number;
-  slowPeriod: number;
-  signalPeriod: number;
-}
-
-// Bollinger Bands configuration
-export interface BollingerBandsConfig {
-  enabled: boolean;
-  period: number;
-  stdDev: number;
-  showFill: boolean;
-}
-
-// Stochastic configuration
-export interface StochasticConfig {
-  enabled: boolean;
-  kPeriod: number;
-  dPeriod: number;
-  smooth: number;
-  overbought: number;
-  oversold: number;
-}
-
-// ATR configuration
-export interface ATRConfig {
-  enabled: boolean;
-  period: number;
-}
-
-// VWAP configuration
-export interface VWAPConfig {
-  enabled: boolean;
-  showBands: boolean;
-  stdDevMultiplier: number;
-}
-
-// Supertrend configuration
-export interface SupertrendConfig {
-  enabled: boolean;
-  period: number;
-  multiplier: number;
-}
-
-// ADX configuration
-export interface ADXConfig {
-  enabled: boolean;
-  period: number;
-  showDI: boolean;
-}
-
-// OBV configuration
-export interface OBVConfig {
-  enabled: boolean;
-}
-
-// Parabolic SAR configuration
-export interface ParabolicSARConfig {
-  enabled: boolean;
-  step: number;
-  max: number;
-}
-
-// EMA Ribbon configuration
-export interface EMARibbonConfig {
-  enabled: boolean;
-  periods: number[];
-}
-
-// Drawing tool types
-export type DrawingToolType = 'horizontalLine' | 'trendLine' | 'rectangle' | 'fibonacciRetracement';
-
-// Drawing object
-export interface DrawingObject {
-  id: string;
-  type: DrawingToolType;
-  color: string;
-  lineWidth: number;
-  // For horizontal line
-  price?: number;
-  // For trend line
-  startTime?: number;
-  startPrice?: number;
-  endTime?: number;
-  endPrice?: number;
-  // For rectangle/fib
-  points?: { time: number; price: number }[];
-}
-
-interface ChartStore {
+interface ChartState {
   // Basic state
   symbol: string;
   interval: TimeInterval;
@@ -156,40 +95,18 @@ interface ChartStore {
   rsiConfigs: RSIConfig[];
   showRSIPanel: boolean;
 
-  // Ichimoku
+  // Indicator configs
   ichimoku: IchimokuConfig;
-
-  // Volume
   volume: VolumeConfig;
-
-  // MACD
   macd: MACDConfig;
-
-  // Bollinger Bands
   bollingerBands: BollingerBandsConfig;
-
-  // Stochastic
   stochastic: StochasticConfig;
-
-  // ATR
   atr: ATRConfig;
-
-  // VWAP
   vwap: VWAPConfig;
-
-  // Supertrend
   supertrend: SupertrendConfig;
-
-  // ADX
   adx: ADXConfig;
-
-  // OBV
   obv: OBVConfig;
-
-  // Parabolic SAR
   parabolicSAR: ParabolicSARConfig;
-
-  // EMA Ribbon
   emaRibbon: EMARibbonConfig;
 
   // Drawing tools
@@ -197,74 +114,61 @@ interface ChartStore {
   drawings: DrawingObject[];
   drawingColor: string;
   drawingLineWidth: number;
+}
 
-  // Actions - Basic
+interface ChartActions {
+  // Basic actions
   setSymbol: (symbol: string) => void;
   setInterval: (interval: TimeInterval) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
 
-  // Actions - Moving Averages
+  // Moving Averages
   addMovingAverage: (type: 'sma' | 'ema', period: number) => void;
   removeMovingAverage: (id: string) => void;
   updateMovingAverage: (id: string, updates: Partial<MovingAverageConfig>) => void;
   toggleMovingAverage: (id: string) => void;
 
-  // Actions - RSI
+  // RSI
   addRSI: (period: number) => void;
   removeRSI: (id: string) => void;
   updateRSI: (id: string, updates: Partial<RSIConfig>) => void;
   toggleRSI: (id: string) => void;
   setShowRSIPanel: (show: boolean) => void;
 
-  // Actions - Ichimoku
+  // Generic indicator actions
+  updateIndicator: <K extends IndicatorKey>(
+    key: K,
+    updates: Partial<ChartState[K]>
+  ) => void;
+  toggleIndicator: (key: IndicatorKey) => void;
+
+  // Legacy indicator actions (for backward compatibility)
   updateIchimoku: (updates: Partial<IchimokuConfig>) => void;
   toggleIchimoku: () => void;
-
-  // Actions - Volume
   updateVolume: (updates: Partial<VolumeConfig>) => void;
   toggleVolume: () => void;
-
-  // Actions - MACD
   updateMACD: (updates: Partial<MACDConfig>) => void;
   toggleMACD: () => void;
-
-  // Actions - Bollinger Bands
   updateBollingerBands: (updates: Partial<BollingerBandsConfig>) => void;
   toggleBollingerBands: () => void;
-
-  // Actions - Stochastic
   updateStochastic: (updates: Partial<StochasticConfig>) => void;
   toggleStochastic: () => void;
-
-  // Actions - ATR
   updateATR: (updates: Partial<ATRConfig>) => void;
   toggleATR: () => void;
-
-  // Actions - VWAP
   updateVWAP: (updates: Partial<VWAPConfig>) => void;
   toggleVWAP: () => void;
-
-  // Actions - Supertrend
   updateSupertrend: (updates: Partial<SupertrendConfig>) => void;
   toggleSupertrend: () => void;
-
-  // Actions - ADX
   updateADX: (updates: Partial<ADXConfig>) => void;
   toggleADX: () => void;
-
-  // Actions - OBV
   toggleOBV: () => void;
-
-  // Actions - Parabolic SAR
   updateParabolicSAR: (updates: Partial<ParabolicSARConfig>) => void;
   toggleParabolicSAR: () => void;
-
-  // Actions - EMA Ribbon
   updateEMARibbon: (updates: Partial<EMARibbonConfig>) => void;
   toggleEMARibbon: () => void;
 
-  // Actions - Drawing tools
+  // Drawing tools
   setActiveDrawingTool: (tool: DrawingToolType | null) => void;
   addDrawing: (drawing: Omit<DrawingObject, 'id'>) => void;
   removeDrawing: (id: string) => void;
@@ -277,144 +181,41 @@ interface ChartStore {
   reset: () => void;
 }
 
-// Generate unique ID
-const generateId = () => Math.random().toString(36).substring(2, 9);
+type ChartStore = ChartState & ChartActions;
 
-// Default moving averages
-const DEFAULT_MOVING_AVERAGES: MovingAverageConfig[] = [
-  { id: generateId(), period: 7, type: 'sma', color: INDICATOR_COLORS.ma[0], enabled: true, lineWidth: 1 },
-  { id: generateId(), period: 25, type: 'sma', color: INDICATOR_COLORS.ma[1], enabled: true, lineWidth: 1 },
-  { id: generateId(), period: 99, type: 'sma', color: INDICATOR_COLORS.ma[2], enabled: true, lineWidth: 1 },
-];
+// Initial state
+const initialState: ChartState = {
+  symbol: 'BTCUSDT',
+  interval: '1m',
+  loading: false,
+  error: null,
 
-// Default RSI configs
-const DEFAULT_RSI_CONFIGS: RSIConfig[] = [
-  { id: generateId(), period: 14, color: INDICATOR_COLORS.rsi[0], enabled: true, overbought: 70, oversold: 30 },
-];
+  movingAverages: DEFAULT_MOVING_AVERAGES,
+  rsiConfigs: DEFAULT_RSI_CONFIGS,
+  showRSIPanel: true,
+  ichimoku: DEFAULT_ICHIMOKU,
+  volume: DEFAULT_VOLUME,
+  macd: DEFAULT_MACD,
+  bollingerBands: DEFAULT_BOLLINGER_BANDS,
+  stochastic: DEFAULT_STOCHASTIC,
+  atr: DEFAULT_ATR,
+  vwap: DEFAULT_VWAP,
+  supertrend: DEFAULT_SUPERTREND,
+  adx: DEFAULT_ADX,
+  obv: DEFAULT_OBV,
+  parabolicSAR: DEFAULT_PARABOLIC_SAR,
+  emaRibbon: DEFAULT_EMA_RIBBON,
 
-// Default Ichimoku
-const DEFAULT_ICHIMOKU: IchimokuConfig = {
-  enabled: false,
-  tenkanPeriod: 9,
-  kijunPeriod: 26,
-  senkouBPeriod: 52,
-  displacement: 26,
-  showTenkan: true,
-  showKijun: true,
-  showSenkouA: true,
-  showSenkouB: true,
-  showChikou: true,
-  showCloud: true,
-};
-
-// Default Volume
-const DEFAULT_VOLUME: VolumeConfig = {
-  enabled: true,
-  showMA: true,
-  maPeriod: 20,
-  maColor: INDICATOR_COLORS.volumeMA,
-};
-
-// Default MACD
-const DEFAULT_MACD: MACDConfig = {
-  enabled: false,
-  fastPeriod: 12,
-  slowPeriod: 26,
-  signalPeriod: 9,
-};
-
-// Default Bollinger Bands
-const DEFAULT_BOLLINGER_BANDS: BollingerBandsConfig = {
-  enabled: false,
-  period: 20,
-  stdDev: 2,
-  showFill: true,
-};
-
-// Default Stochastic
-const DEFAULT_STOCHASTIC: StochasticConfig = {
-  enabled: false,
-  kPeriod: 14,
-  dPeriod: 3,
-  smooth: 3,
-  overbought: 80,
-  oversold: 20,
-};
-
-// Default ATR
-const DEFAULT_ATR: ATRConfig = {
-  enabled: false,
-  period: 14,
-};
-
-// Default VWAP
-const DEFAULT_VWAP: VWAPConfig = {
-  enabled: false,
-  showBands: true,
-  stdDevMultiplier: 2,
-};
-
-// Default Supertrend
-const DEFAULT_SUPERTREND: SupertrendConfig = {
-  enabled: false,
-  period: 10,
-  multiplier: 3,
-};
-
-// Default ADX
-const DEFAULT_ADX: ADXConfig = {
-  enabled: false,
-  period: 14,
-  showDI: true,
-};
-
-// Default OBV
-const DEFAULT_OBV: OBVConfig = {
-  enabled: false,
-};
-
-// Default Parabolic SAR
-const DEFAULT_PARABOLIC_SAR: ParabolicSARConfig = {
-  enabled: false,
-  step: 0.02,
-  max: 0.2,
-};
-
-// Default EMA Ribbon
-const DEFAULT_EMA_RIBBON: EMARibbonConfig = {
-  enabled: false,
-  periods: [8, 13, 21, 34, 55, 89],
+  activeDrawingTool: null,
+  drawings: [],
+  drawingColor: INDICATOR_COLORS.horizontalLine,
+  drawingLineWidth: 1,
 };
 
 export const useChartStore = create<ChartStore>()(
   persist(
     (set, get) => ({
-      // Initial state
-      symbol: 'BTCUSDT',
-      interval: '1m',
-      loading: false,
-      error: null,
-
-      movingAverages: DEFAULT_MOVING_AVERAGES,
-      rsiConfigs: DEFAULT_RSI_CONFIGS,
-      showRSIPanel: true,
-      ichimoku: DEFAULT_ICHIMOKU,
-      volume: DEFAULT_VOLUME,
-      macd: DEFAULT_MACD,
-      bollingerBands: DEFAULT_BOLLINGER_BANDS,
-      stochastic: DEFAULT_STOCHASTIC,
-      atr: DEFAULT_ATR,
-      vwap: DEFAULT_VWAP,
-      supertrend: DEFAULT_SUPERTREND,
-      adx: DEFAULT_ADX,
-      obv: DEFAULT_OBV,
-      parabolicSAR: DEFAULT_PARABOLIC_SAR,
-      emaRibbon: DEFAULT_EMA_RIBBON,
-
-      activeDrawingTool: null,
-      drawings: [],
-      drawingColor: INDICATOR_COLORS.horizontalLine,
-      drawingLineWidth: 1,
+      ...initialState,
 
       // Basic actions
       setSymbol: (symbol) => set({ symbol, loading: true, error: null }),
@@ -425,7 +226,7 @@ export const useChartStore = create<ChartStore>()(
       // Moving Average actions
       addMovingAverage: (type, period) => {
         const { movingAverages } = get();
-        if (movingAverages.length >= 10) return; // Max 10 MAs
+        if (movingAverages.length >= 10) return;
 
         const colorIndex = movingAverages.length;
         const newMA: MovingAverageConfig = {
@@ -463,7 +264,7 @@ export const useChartStore = create<ChartStore>()(
       // RSI actions
       addRSI: (period) => {
         const { rsiConfigs } = get();
-        if (rsiConfigs.length >= 5) return; // Max 5 RSIs
+        if (rsiConfigs.length >= 5) return;
 
         const colorIndex = rsiConfigs.length;
         const newRSI: RSIConfig = {
@@ -500,109 +301,40 @@ export const useChartStore = create<ChartStore>()(
 
       setShowRSIPanel: (show) => set({ showRSIPanel: show }),
 
-      // Ichimoku actions
-      updateIchimoku: (updates) => {
-        set({ ichimoku: { ...get().ichimoku, ...updates } });
+      // Generic indicator update/toggle
+      updateIndicator: (key, updates) => {
+        set({ [key]: { ...get()[key], ...updates } });
       },
 
-      toggleIchimoku: () => {
-        set({ ichimoku: { ...get().ichimoku, enabled: !get().ichimoku.enabled } });
+      toggleIndicator: (key) => {
+        const current = get()[key] as { enabled: boolean };
+        set({ [key]: { ...get()[key], enabled: !current.enabled } });
       },
 
-      // Volume actions
-      updateVolume: (updates) => {
-        set({ volume: { ...get().volume, ...updates } });
-      },
-
-      toggleVolume: () => {
-        set({ volume: { ...get().volume, enabled: !get().volume.enabled } });
-      },
-
-      // MACD actions
-      updateMACD: (updates) => {
-        set({ macd: { ...get().macd, ...updates } });
-      },
-
-      toggleMACD: () => {
-        set({ macd: { ...get().macd, enabled: !get().macd.enabled } });
-      },
-
-      // Bollinger Bands actions
-      updateBollingerBands: (updates) => {
-        set({ bollingerBands: { ...get().bollingerBands, ...updates } });
-      },
-
-      toggleBollingerBands: () => {
-        set({ bollingerBands: { ...get().bollingerBands, enabled: !get().bollingerBands.enabled } });
-      },
-
-      // Stochastic actions
-      updateStochastic: (updates) => {
-        set({ stochastic: { ...get().stochastic, ...updates } });
-      },
-
-      toggleStochastic: () => {
-        set({ stochastic: { ...get().stochastic, enabled: !get().stochastic.enabled } });
-      },
-
-      // ATR actions
-      updateATR: (updates) => {
-        set({ atr: { ...get().atr, ...updates } });
-      },
-
-      toggleATR: () => {
-        set({ atr: { ...get().atr, enabled: !get().atr.enabled } });
-      },
-
-      // VWAP actions
-      updateVWAP: (updates) => {
-        set({ vwap: { ...get().vwap, ...updates } });
-      },
-
-      toggleVWAP: () => {
-        set({ vwap: { ...get().vwap, enabled: !get().vwap.enabled } });
-      },
-
-      // Supertrend actions
-      updateSupertrend: (updates) => {
-        set({ supertrend: { ...get().supertrend, ...updates } });
-      },
-
-      toggleSupertrend: () => {
-        set({ supertrend: { ...get().supertrend, enabled: !get().supertrend.enabled } });
-      },
-
-      // ADX actions
-      updateADX: (updates) => {
-        set({ adx: { ...get().adx, ...updates } });
-      },
-
-      toggleADX: () => {
-        set({ adx: { ...get().adx, enabled: !get().adx.enabled } });
-      },
-
-      // OBV actions
-      toggleOBV: () => {
-        set({ obv: { ...get().obv, enabled: !get().obv.enabled } });
-      },
-
-      // Parabolic SAR actions
-      updateParabolicSAR: (updates) => {
-        set({ parabolicSAR: { ...get().parabolicSAR, ...updates } });
-      },
-
-      toggleParabolicSAR: () => {
-        set({ parabolicSAR: { ...get().parabolicSAR, enabled: !get().parabolicSAR.enabled } });
-      },
-
-      // EMA Ribbon actions
-      updateEMARibbon: (updates) => {
-        set({ emaRibbon: { ...get().emaRibbon, ...updates } });
-      },
-
-      toggleEMARibbon: () => {
-        set({ emaRibbon: { ...get().emaRibbon, enabled: !get().emaRibbon.enabled } });
-      },
+      // Legacy actions using generic methods
+      updateIchimoku: (updates) => get().updateIndicator('ichimoku', updates),
+      toggleIchimoku: () => get().toggleIndicator('ichimoku'),
+      updateVolume: (updates) => get().updateIndicator('volume', updates),
+      toggleVolume: () => get().toggleIndicator('volume'),
+      updateMACD: (updates) => get().updateIndicator('macd', updates),
+      toggleMACD: () => get().toggleIndicator('macd'),
+      updateBollingerBands: (updates) => get().updateIndicator('bollingerBands', updates),
+      toggleBollingerBands: () => get().toggleIndicator('bollingerBands'),
+      updateStochastic: (updates) => get().updateIndicator('stochastic', updates),
+      toggleStochastic: () => get().toggleIndicator('stochastic'),
+      updateATR: (updates) => get().updateIndicator('atr', updates),
+      toggleATR: () => get().toggleIndicator('atr'),
+      updateVWAP: (updates) => get().updateIndicator('vwap', updates),
+      toggleVWAP: () => get().toggleIndicator('vwap'),
+      updateSupertrend: (updates) => get().updateIndicator('supertrend', updates),
+      toggleSupertrend: () => get().toggleIndicator('supertrend'),
+      updateADX: (updates) => get().updateIndicator('adx', updates),
+      toggleADX: () => get().toggleIndicator('adx'),
+      toggleOBV: () => get().toggleIndicator('obv'),
+      updateParabolicSAR: (updates) => get().updateIndicator('parabolicSAR', updates),
+      toggleParabolicSAR: () => get().toggleIndicator('parabolicSAR'),
+      updateEMARibbon: (updates) => get().updateIndicator('emaRibbon', updates),
+      toggleEMARibbon: () => get().toggleIndicator('emaRibbon'),
 
       // Drawing actions
       setActiveDrawingTool: (tool) => set({ activeDrawingTool: tool }),
@@ -628,38 +360,11 @@ export const useChartStore = create<ChartStore>()(
       },
 
       clearAllDrawings: () => set({ drawings: [] }),
-
       setDrawingColor: (color) => set({ drawingColor: color }),
-
       setDrawingLineWidth: (width) => set({ drawingLineWidth: width }),
 
       // Reset
-      reset: () =>
-        set({
-          symbol: 'BTCUSDT',
-          interval: '1m',
-          loading: false,
-          error: null,
-          movingAverages: DEFAULT_MOVING_AVERAGES,
-          rsiConfigs: DEFAULT_RSI_CONFIGS,
-          showRSIPanel: true,
-          ichimoku: DEFAULT_ICHIMOKU,
-          volume: DEFAULT_VOLUME,
-          macd: DEFAULT_MACD,
-          bollingerBands: DEFAULT_BOLLINGER_BANDS,
-          stochastic: DEFAULT_STOCHASTIC,
-          atr: DEFAULT_ATR,
-          vwap: DEFAULT_VWAP,
-          supertrend: DEFAULT_SUPERTREND,
-          adx: DEFAULT_ADX,
-          obv: DEFAULT_OBV,
-          parabolicSAR: DEFAULT_PARABOLIC_SAR,
-          emaRibbon: DEFAULT_EMA_RIBBON,
-          activeDrawingTool: null,
-          drawings: [],
-          drawingColor: INDICATOR_COLORS.horizontalLine,
-          drawingLineWidth: 1,
-        }),
+      reset: () => set(initialState),
     }),
     {
       name: 'chart-settings',
