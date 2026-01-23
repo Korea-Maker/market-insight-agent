@@ -2,6 +2,7 @@
 
 import { TradingChart } from '@/components/Chart/TradingChart';
 import { MarketTicker } from '@/components/Header/MarketTicker';
+import MarketInsightPanel from '@/components/Analysis/MarketInsightPanel';
 import { motion } from 'framer-motion';
 
 const container = {
@@ -73,53 +74,10 @@ export default function DashboardPage() {
           </div>
         </motion.div>
         
-        {/* AI & System Status - Vertical Stack */}
-        <motion.div variants={item} className="lg:col-span-1 lg:row-span-2 flex flex-col gap-6">
-          {/* AI Status Card */}
-          <div className="flex-1 rounded-3xl border border-white/10 bg-card/40 backdrop-blur-xl p-6 shadow-lg hover:shadow-xl hover:border-primary/20 transition-all duration-300 flex flex-col relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-primary/10 blur-[50px] rounded-full pointer-events-none" />
-            
-            <h3 className="text-lg font-bold font-heading mb-4 flex items-center gap-2">
-              <span className="text-2xl">🧠</span> AI Engine
-            </h3>
-            
-            <div className="flex-1 flex flex-col items-center justify-center text-center space-y-4 p-4 rounded-2xl bg-muted/20 border border-white/5">
-              <div className="relative">
-                <div className="absolute inset-0 bg-primary/30 blur-xl animate-pulse-slow" />
-                <div className="relative h-14 w-14 rounded-2xl bg-gradient-to-br from-primary via-primary/80 to-primary/50 flex items-center justify-center shadow-lg shadow-primary/20">
-                  <span className="text-2xl text-white">⚡</span>
-                </div>
-              </div>
-              <div>
-                <span className="text-sm font-semibold block text-foreground/90">Processing Data</span>
-                <span className="text-xs text-muted-foreground">Analysing market trends</span>
-              </div>
-            </div>
-            
-            <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
-               <div className="flex justify-between text-xs">
-                 <span className="text-muted-foreground">Confidence</span>
-                 <span className="font-mono text-primary">98.4%</span>
-               </div>
-               <div className="flex justify-between text-xs">
-                 <span className="text-muted-foreground">Latency</span>
-                 <span className="font-mono text-emerald-500">24ms</span>
-               </div>
-            </div>
-          </div>
-          
-          {/* Order Book / Small Stat */}
-          <div className="h-[200px] rounded-3xl border border-white/10 bg-card/40 backdrop-blur-xl p-6 shadow-lg hover:shadow-xl hover:border-primary/20 transition-all duration-300 flex flex-col justify-between">
-             <div className="flex items-start justify-between">
-                <h3 className="font-semibold text-muted-foreground text-sm">Active Orders</h3>
-                <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-             </div>
-             <div className="space-y-1">
-               <span className="text-3xl font-bold font-mono tracking-tighter">1,248</span>
-               <div className="h-1 w-full bg-muted/30 rounded-full overflow-hidden">
-                 <div className="h-full w-[70%] bg-emerald-500 rounded-full" />
-               </div>
-             </div>
+        {/* AI Market Insight Panel */}
+        <motion.div variants={item} className="lg:col-span-1 lg:row-span-2">
+          <div className="h-full rounded-3xl border border-white/10 bg-card/40 backdrop-blur-xl shadow-lg hover:shadow-xl hover:border-primary/20 transition-all duration-300 overflow-hidden [&>div]:border-0 [&>div]:shadow-none [&>div]:bg-transparent">
+            <MarketInsightPanel symbol="BTCUSDT" />
           </div>
         </motion.div>
         
