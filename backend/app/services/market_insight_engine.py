@@ -47,17 +47,15 @@ class MarketInsightEngine:
 
     async def _analyze_news(self, symbol: str) -> List[NewsInsight]:
         """뉴스 분석"""
-        async with AsyncSessionLocal() as db:
-            try:
-                return await self.news_analyzer.analyze_recent_news(
-                    db=db,
-                    hours=24,
-                    symbol=symbol.replace("USDT", ""),
-                    limit=20
-                )
-            except Exception as e:
-                logger.warning(f"뉴스 분석 실패 (계속 진행): {e}")
-                return []
+        try:
+            return await self.news_analyzer.analyze_recent_news(
+                symbol=symbol.replace("USDT", ""),
+                hours=24,
+                limit=20
+            )
+        except Exception as e:
+            logger.warning(f"뉴스 분석 실패 (계속 진행): {e}")
+            return []
 
     async def _call_openai_api(self, prompt: str) -> str:
         """OpenAI GPT API 호출"""

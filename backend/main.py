@@ -76,6 +76,12 @@ async def lifespan(app: FastAPI):
     background_tasks.append(("뉴스 수집기", news_collector_task))
     logger.info("뉴스 수집기 백그라운드 태스크 시작됨")
 
+    # AI 시장 분석 엔진 시작 (OpenAI API 키 필요)
+    from app.services.market_insight_engine import run_market_insight_analyzer
+    market_insight_task = asyncio.create_task(run_market_insight_analyzer(interval_minutes=5))
+    background_tasks.append(("AI 시장 분석 엔진", market_insight_task))
+    logger.info("AI 시장 분석 엔진 백그라운드 태스크 시작됨")
+
     yield
 
     # 종료 시 실행할 코드
