@@ -4,13 +4,13 @@ RSS 뉴스 수집 서비스
 """
 import asyncio
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Dict, Optional
 import feedparser
 import httpx
 from bs4 import BeautifulSoup
 from deep_translator import GoogleTranslator
-from sqlalchemy import select
+from sqlalchemy import select, and_
 from sqlalchemy.exc import IntegrityError
 
 from app.core.database import AsyncSessionLocal
@@ -80,8 +80,10 @@ async def get_enabled_sources() -> List[Dict]:
     """
     async with AsyncSessionLocal() as session:
         stmt = select(IntelligenceSource).where(
-            IntelligenceSource.is_enabled == True,
-            IntelligenceSource.source_type == "rss"
+            and_(
+                IntelligenceSource.is_enabled == True,
+                IntelligenceSource.source_type == "rss"
+            )
         )
         result = await session.execute(stmt)
         sources = result.scalars().all()
@@ -109,8 +111,8 @@ async def update_source_success(source_name: str) -> None:
             source = result.scalar_one_or_none()
 
             if source:
-                source.last_fetch_at = datetime.utcnow()
-                source.last_success_at = datetime.utcnow()
+                source.last_fetch_at = datetime.now(timezone.utc)
+                source.last_success_at = datetime.now(timezone.utc)
                 source.success_count = (source.success_count or 0) + 1
                 source.last_error = None
                 await session.commit()
@@ -135,7 +137,7 @@ async def update_source_failure(source_name: str, error: str) -> None:
             source = result.scalar_one_or_none()
 
             if source:
-                source.last_fetch_at = datetime.utcnow()
+                source.last_fetch_at = datetime.now(timezone.utc)
                 source.failure_count = (source.failure_count or 0) + 1
                 source.last_error = str(error)[:1000]  # 오류 메시지 길이 제한
                 await session.commit()
@@ -145,25 +147,25 @@ async def update_source_failure(source_name: str, error: str) -> None:
             logger.error(f"{source_name} 소스 실패 상태 업데이트 실패: {e}")
 
 
-def parse_published_date(date_str: Optional[str]) -> Optional[datetime]:
+def parse_published_date(date_tuple) -> Optional[datetime]:
     """
-    RSS 피드의 발행 날짜 문자열을 datetime 객체로 변환
-    
+    RSS 피드의 발행 날짜를 datetime 객체로 변환
+
     Args:
-        date_str: RSS 피드의 날짜 문자열
-        
+        date_tuple: feedparser의 time.struct_time 튜플 또는 None
+
     Returns:
         datetime 객체 또는 None
     """
-    if not date_str:
+    if not date_tuple:
         return None
-    
+
     try:
-        # feedparser는 이미 파싱된 시간 튜플을 제공
-        # 'published_parsed' 또는 'updated_parsed' 사용
-        return datetime(*date_str[:6])
+        # feedparser는 이미 파싱된 시간 튜플을 제공 (time.struct_time)
+        # 'published_parsed' 또는 'updated_parsed'에서 받은 튜플 사용
+        return datetime(*date_tuple[:6])
     except (ValueError, TypeError) as e:
-        logger.warning(f"날짜 파싱 실패: {date_str}, 오류: {e}")
+        logger.warning(f"날짜 파싱 실패: {date_tuple}, 오류: {e}")
         return None
 
 

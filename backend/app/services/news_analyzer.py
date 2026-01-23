@@ -5,7 +5,7 @@
 import logging
 import re
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Tuple
 
 from sqlalchemy import select
@@ -95,7 +95,7 @@ class NewsAnalyzer:
         Returns:
             NewsInsight 리스트
         """
-        cutoff_time = datetime.utcnow() - timedelta(hours=hours)
+        cutoff_time = datetime.now(timezone.utc) - timedelta(hours=hours)
 
         async with AsyncSessionLocal() as session:
             stmt = (
@@ -264,7 +264,7 @@ class NewsAnalyzer:
 
         # 3. 최신성 기반
         if news.created_at:
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc)
             hours_ago = (now - news.created_at).total_seconds() / 3600
 
             if hours_ago < 1:
