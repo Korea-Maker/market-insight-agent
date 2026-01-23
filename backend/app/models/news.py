@@ -21,6 +21,7 @@ class News(Base):
         published: 발행 시간
         source: 뉴스 출처 (예: CoinDesk, CoinTelegraph)
         description: 기사 요약/설명 (옵션)
+        description_kr: 한국어 번역 요약 (옵션)
         created_at: 데이터베이스 저장 시간
     """
     __tablename__ = "news"
@@ -34,6 +35,7 @@ class News(Base):
     published = Column(DateTime, nullable=True, comment="발행 시간")
     source = Column(String(100), nullable=False, index=True, comment="뉴스 출처")
     description = Column(Text, nullable=True, comment="기사 요약")
+    description_kr = Column(Text, nullable=True, comment="한국어 번역 요약")
     
     # 메타데이터 (SQLite 호환: timezone 제거)
     created_at = Column(

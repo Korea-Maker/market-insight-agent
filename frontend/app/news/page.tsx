@@ -29,6 +29,7 @@ interface NewsItem {
   published: string | null;
   source: string;
   description: string | null;
+  description_kr: string | null;
   created_at: string;
 }
 
@@ -117,8 +118,8 @@ export default function NewsPage() {
   };
 
   // 제목에서 카테고리 추론 (간단한 키워드 기반)
-  const inferCategory = (title: string, description: string | null): string => {
-    const text = `${title} ${description || ''}`.toLowerCase();
+  const inferCategory = (item: NewsItem): string => {
+    const text = `${item.title_kr || item.title} ${item.description_kr || item.description || ''}`.toLowerCase();
 
     if (text.includes('sec') || text.includes('regulation') || text.includes('law') ||
       text.includes('규제') || text.includes('법') || text.includes('정책')) {
@@ -134,7 +135,7 @@ export default function NewsPage() {
   // 필터링된 뉴스
   const filteredNews = news.filter(item => {
     if (activeFilter === 'all') return true;
-    return inferCategory(item.title, item.description) === activeFilter;
+    return inferCategory(item) === activeFilter;
   });
 
   // 소스별 그라디언트 색상 가져오기
@@ -233,7 +234,7 @@ export default function NewsPage() {
       {!loading && !error && (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {filteredNews.map((item, index) => {
-            const category = inferCategory(item.title, item.description);
+            const category = inferCategory(item);
             const isRecent = item.published &&
               (new Date().getTime() - new Date(item.published).getTime()) < 3600000; // 1시간 이내
 
@@ -298,9 +299,9 @@ export default function NewsPage() {
                     </div>
 
                     {/* Description */}
-                    {item.description && (
+                    {(item.description_kr || item.description) && (
                       <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
-                        {item.description}
+                        {item.description_kr || item.description}
                       </p>
                     )}
 
