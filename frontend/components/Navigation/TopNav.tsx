@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { LayoutDashboard, Newspaper, Users, BrainCircuit, LogIn, LogOut, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/Theme/ThemeToggle';
+import { NotificationBell } from '@/components/Notification';
 import { useAuthStore } from '@/store/useAuthStore';
 import { motion } from 'framer-motion';
 
@@ -117,6 +118,13 @@ export function TopNav(): React.ReactElement {
           <div className="bg-background/40 backdrop-blur-sm rounded-full border border-white/5 hover:border-white/20 transition-colors duration-300">
             <ThemeToggle />
           </div>
+
+          {/* Notification Bell - 인증된 사용자만 표시 */}
+          {isAuthenticated && (
+            <div className="bg-background/40 backdrop-blur-sm rounded-full border border-white/5 hover:border-white/20 transition-colors duration-300">
+              <NotificationBell />
+            </div>
+          )}
 
           {/* Auth */}
           {isAuthenticated ? (

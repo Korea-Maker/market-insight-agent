@@ -9,6 +9,17 @@ from app.models.source import IntelligenceSource
 from app.models.market_insight import MarketInsight
 from app.models.news_sentiment import NewsSentiment
 from app.models.sentiment_snapshot import SentimentSnapshot
+from app.models.notification import (
+    Notification,
+    PriceAlert,
+    NotificationType,
+    NotificationPriority,
+    AlertCondition,
+)
+from app.models.notification_pref import (
+    NotificationPreference,
+    NewsSubscription,
+)
 
 __all__ = [
     "News",
@@ -24,4 +35,12 @@ __all__ = [
     "MarketInsight",
     "NewsSentiment",
     "SentimentSnapshot",
+    # Notification system
+    "Notification",
+    "PriceAlert",
+    "NotificationType",
+    "NotificationPriority",
+    "AlertCondition",
+    "NotificationPreference",
+    "NewsSubscription",
 ]

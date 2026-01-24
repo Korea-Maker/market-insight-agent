@@ -83,6 +83,7 @@ async def init_db():
         from app.models import (  # noqa: F401
             News, User, OAuthAccount, Post, PostLike, Tag, Comment, CommentLike,
             IntelligenceSource, MarketInsight, NewsSentiment, SentimentSnapshot,
+            Notification, PriceAlert, NotificationPreference, NewsSubscription,
         )
 
         await conn.run_sync(Base.metadata.create_all)
