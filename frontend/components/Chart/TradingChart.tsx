@@ -125,6 +125,14 @@ export function TradingChart(): React.ReactElement {
   const [drawingToolsOpen, setDrawingToolsOpen] = useState(false);
   const [crosshairData, setCrosshairData] = useState<CrosshairData | null>(null);
 
+  // Pending drawing ref for multi-click tools (trendLine, rectangle, etc.)
+  // Using ref instead of state to avoid stale closure issues in click handlers
+  const pendingDrawingRef = useRef<{
+    type: string;
+    startTime?: number;
+    startPrice?: number;
+  } | null>(null);
+
   // Main chart refs
   const mainContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -187,6 +195,9 @@ export function TradingChart(): React.ReactElement {
   // Horizontal line refs for drawings
   const horizontalLinesRef = useRef<Map<string, ReturnType<ISeriesApi<'Candlestick'>['createPriceLine']>>>(new Map());
 
+  // TrendLine series refs for drawings
+  const trendLineSeriesRef = useRef<Map<string, ISeriesApi<'Line'>>>(new Map());
+
   // Current candle tracking (for real-time updates)
   const currentCandleRef = useRef<CandleData | null>(null);
   const currentCandleTimeRef = useRef<number>(0);
@@ -229,32 +240,25 @@ export function TradingChart(): React.ReactElement {
   // Memoize RSI enabled state to prevent unnecessary recalculations
   const hasActiveRSI = useMemo(() => showRSIPanel && rsiConfigs.some((r) => r.enabled), [showRSIPanel, rsiConfigs]);
 
-  // Calculate chart heights based on enabled sub-panels
-  const chartHeights = useMemo(() => {
-    const hasRSI = hasActiveRSI;
-    const hasMACD = macd.enabled;
-    const hasStochastic = stochastic.enabled;
-    const hasATR = atr.enabled;
-    const hasADX = adx.enabled;
-    const hasOBV = obv.enabled;
+  // Reset pending drawing when tool changes
+  useEffect(() => {
+    if (!activeDrawingTool) {
+      pendingDrawingRef.current = null;
+    }
+  }, [activeDrawingTool]);
 
-    const subPanelCount = [hasRSI, hasMACD, hasStochastic, hasATR, hasADX, hasOBV].filter(Boolean).length;
-
-    // Calculate heights based on number of sub-panels
-    const subPanelHeight = subPanelCount > 0 ? Math.min(20, 60 / subPanelCount) : 0;
-    const mainHeight = 100 - (subPanelCount * subPanelHeight);
-
-    return {
-      main: `${mainHeight}%`,
-      subPanel: `${subPanelHeight}%`,
-      rsi: hasRSI ? `${subPanelHeight}%` : '0%',
-      macd: hasMACD ? `${subPanelHeight}%` : '0%',
-      stochastic: hasStochastic ? `${subPanelHeight}%` : '0%',
-      atr: hasATR ? `${subPanelHeight}%` : '0%',
-      adx: hasADX ? `${subPanelHeight}%` : '0%',
-      obv: hasOBV ? `${subPanelHeight}%` : '0%',
-    };
+  // Calculate sub-panel count for responsive sizing
+  const subPanelCount = useMemo(() => {
+    return [hasActiveRSI, macd.enabled, stochastic.enabled, atr.enabled, adx.enabled, obv.enabled].filter(Boolean).length;
   }, [hasActiveRSI, macd.enabled, stochastic.enabled, atr.enabled, adx.enabled, obv.enabled]);
+
+  // Dynamic sub-panel height based on count (more panels = smaller height each)
+  const subPanelHeight = useMemo(() => {
+    if (subPanelCount === 0) return 100;
+    if (subPanelCount <= 2) return 100;
+    if (subPanelCount <= 4) return 85;
+    return 70; // 5-6 panels
+  }, [subPanelCount]);
 
   // Create sub-chart (RSI or MACD)
   const createSubChart = useCallback((container: HTMLDivElement, showTimeScale = false): IChartApi => {
@@ -990,17 +994,58 @@ export function TradingChart(): React.ReactElement {
       const currentTool = useChartStore.getState().activeDrawingTool;
       const color = useChartStore.getState().drawingColor;
 
-      if (currentTool === 'horizontalLine' && param.point && candleSeriesRef.current) {
-        const price = candleSeries.coordinateToPrice(param.point.y);
-        if (price !== null) {
-          useChartStore.getState().addDrawing({
-            type: 'horizontalLine',
-            price,
-            color,
-            lineWidth: 1,
-          });
-          useChartStore.getState().setActiveDrawingTool(null);
-        }
+      if (!currentTool || !param.point || !candleSeriesRef.current) return;
+
+      const price = candleSeries.coordinateToPrice(param.point.y);
+      const time = param.time as number;
+
+      switch (currentTool) {
+        case 'horizontalLine':
+          if (price !== null) {
+            useChartStore.getState().addDrawing({
+              type: 'horizontalLine',
+              price,
+              color,
+              lineWidth: 1,
+            });
+            useChartStore.getState().setActiveDrawingTool(null);
+          }
+          break;
+
+        case 'verticalLine':
+          if (time) {
+            useChartStore.getState().addDrawing({
+              type: 'verticalLine',
+              startTime: time,
+              color,
+              lineWidth: 1,
+            });
+            useChartStore.getState().setActiveDrawingTool(null);
+          }
+          break;
+
+        case 'trendLine':
+          if (price !== null && time) {
+            const pending = pendingDrawingRef.current;
+            if (!pending || pending.type !== 'trendLine') {
+              // First click - set start point
+              pendingDrawingRef.current = { type: 'trendLine', startTime: time, startPrice: price };
+            } else {
+              // Second click - complete the line
+              useChartStore.getState().addDrawing({
+                type: 'trendLine',
+                startTime: pending.startTime,
+                startPrice: pending.startPrice,
+                endTime: time,
+                endPrice: price,
+                color,
+                lineWidth: 1,
+              });
+              pendingDrawingRef.current = null;
+              useChartStore.getState().setActiveDrawingTool(null);
+            }
+          }
+          break;
       }
     });
 
@@ -1496,13 +1541,14 @@ export function TradingChart(): React.ReactElement {
     }
   }, [volume.enabled, volume.showMA]);
 
-  // Update drawings (horizontal lines)
+  // Update drawings (horizontal lines, trend lines)
   useEffect(() => {
-    if (!candleSeriesRef.current) return;
+    if (!candleSeriesRef.current || !chartRef.current) return;
 
     const candleSeries = candleSeriesRef.current;
+    const chart = chartRef.current;
 
-    // Remove old lines
+    // Remove old horizontal lines
     horizontalLinesRef.current.forEach((line, id) => {
       if (!drawings.find((d) => d.id === id)) {
         candleSeries.removePriceLine(line);
@@ -1510,7 +1556,15 @@ export function TradingChart(): React.ReactElement {
       }
     });
 
-    // Add/update lines
+    // Remove old trend lines
+    trendLineSeriesRef.current.forEach((series, id) => {
+      if (!drawings.find((d) => d.id === id)) {
+        chart.removeSeries(series);
+        trendLineSeriesRef.current.delete(id);
+      }
+    });
+
+    // Add/update horizontal lines
     drawings
       .filter((d) => d.type === 'horizontalLine' && d.price !== undefined)
       .forEach((drawing) => {
@@ -1523,6 +1577,26 @@ export function TradingChart(): React.ReactElement {
             axisLabelVisible: true,
           });
           horizontalLinesRef.current.set(drawing.id, line);
+        }
+      });
+
+    // Add/update trend lines
+    drawings
+      .filter((d) => d.type === 'trendLine' && d.startTime && d.endTime && d.startPrice !== undefined && d.endPrice !== undefined)
+      .forEach((drawing) => {
+        if (!trendLineSeriesRef.current.has(drawing.id)) {
+          const trendSeries = chart.addSeries(LineSeries, {
+            color: drawing.color,
+            lineWidth: drawing.lineWidth as 1 | 2 | 3 | 4,
+            lastValueVisible: false,
+            priceLineVisible: false,
+            crosshairMarkerVisible: false,
+          });
+          trendSeries.setData([
+            { time: drawing.startTime as Time, value: drawing.startPrice! },
+            { time: drawing.endTime as Time, value: drawing.endPrice! },
+          ]);
+          trendLineSeriesRef.current.set(drawing.id, trendSeries);
         }
       });
   }, [drawings]);
@@ -1627,16 +1701,15 @@ export function TradingChart(): React.ReactElement {
 
       {/* Chart panels */}
       <div className="flex-1 flex flex-col p-2 pt-14">
-        {/* Main chart */}
+        {/* Main chart - flex-1 to use remaining space */}
         <div
           ref={mainContainerRef}
-          className="w-full"
-          style={{ height: chartHeights.main }}
+          className="w-full flex-1 min-h-0"
         />
 
         {/* RSI chart */}
         {hasActiveRSI && (
-          <div className="border-t border-border/50 mt-1 pt-1 relative">
+          <div className="border-t border-border/50 mt-1 pt-1 relative flex-shrink-0" style={{ height: `${subPanelHeight}px` }}>
             <SubPanelLegend
               indicatorType="rsi"
               label=""
@@ -1645,15 +1718,14 @@ export function TradingChart(): React.ReactElement {
             />
             <div
               ref={rsiContainerRef}
-              className="w-full"
-              style={{ height: chartHeights.rsi, minHeight: '80px' }}
+              className="w-full h-full"
             />
           </div>
         )}
 
         {/* MACD chart */}
         {macd.enabled && (
-          <div className="border-t border-border/50 mt-1 pt-1 relative">
+          <div className="border-t border-border/50 mt-1 pt-1 relative flex-shrink-0" style={{ height: `${subPanelHeight}px` }}>
             <SubPanelLegend
               indicatorType="macd"
               label=""
@@ -1662,15 +1734,14 @@ export function TradingChart(): React.ReactElement {
             />
             <div
               ref={macdContainerRef}
-              className="w-full"
-              style={{ height: chartHeights.macd, minHeight: '80px' }}
+              className="w-full h-full"
             />
           </div>
         )}
 
         {/* Stochastic chart */}
         {stochastic.enabled && (
-          <div className="border-t border-border/50 mt-1 pt-1 relative">
+          <div className="border-t border-border/50 mt-1 pt-1 relative flex-shrink-0" style={{ height: `${subPanelHeight}px` }}>
             <SubPanelLegend
               indicatorType="stochastic"
               label=""
@@ -1679,15 +1750,14 @@ export function TradingChart(): React.ReactElement {
             />
             <div
               ref={stochasticContainerRef}
-              className="w-full"
-              style={{ height: chartHeights.stochastic, minHeight: '80px' }}
+              className="w-full h-full"
             />
           </div>
         )}
 
         {/* ATR chart */}
         {atr.enabled && (
-          <div className="border-t border-border/50 mt-1 pt-1 relative">
+          <div className="border-t border-border/50 mt-1 pt-1 relative flex-shrink-0" style={{ height: `${subPanelHeight}px` }}>
             <SubPanelLegend
               indicatorType="atr"
               label=""
@@ -1696,15 +1766,14 @@ export function TradingChart(): React.ReactElement {
             />
             <div
               ref={atrContainerRef}
-              className="w-full"
-              style={{ height: chartHeights.atr, minHeight: '80px' }}
+              className="w-full h-full"
             />
           </div>
         )}
 
         {/* ADX chart */}
         {adx.enabled && (
-          <div className="border-t border-border/50 mt-1 pt-1 relative">
+          <div className="border-t border-border/50 mt-1 pt-1 relative flex-shrink-0" style={{ height: `${subPanelHeight}px` }}>
             <SubPanelLegend
               indicatorType="adx"
               label=""
@@ -1713,15 +1782,14 @@ export function TradingChart(): React.ReactElement {
             />
             <div
               ref={adxContainerRef}
-              className="w-full"
-              style={{ height: chartHeights.adx, minHeight: '80px' }}
+              className="w-full h-full"
             />
           </div>
         )}
 
         {/* OBV chart */}
         {obv.enabled && (
-          <div className="border-t border-border/50 mt-1 pt-1 relative">
+          <div className="border-t border-border/50 mt-1 pt-1 relative flex-shrink-0" style={{ height: `${subPanelHeight}px` }}>
             <SubPanelLegend
               indicatorType="obv"
               label=""
@@ -1729,8 +1797,7 @@ export function TradingChart(): React.ReactElement {
             />
             <div
               ref={obvContainerRef}
-              className="w-full"
-              style={{ height: chartHeights.obv, minHeight: '80px' }}
+              className="w-full h-full"
             />
           </div>
         )}
