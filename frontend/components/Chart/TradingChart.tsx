@@ -21,6 +21,8 @@ import { useChartStore, TimeInterval, MovingAverageConfig } from '@/store/useCha
 import { ChartControls } from './ChartControls';
 import { IndicatorSettingsPanel } from './IndicatorSettingsPanel';
 import { ActiveIndicatorLegend, CrosshairData } from './ActiveIndicatorLegend';
+import { SubPanelLegend } from './SubPanelLegend';
+import { DrawingToolsPanel } from './DrawingToolsPanel';
 import {
   calculateSMA,
   calculateEMA,
@@ -120,6 +122,7 @@ interface OverlaySeriesRefs {
 export function TradingChart(): React.ReactElement {
   // UI State
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [drawingToolsOpen, setDrawingToolsOpen] = useState(false);
   const [crosshairData, setCrosshairData] = useState<CrosshairData | null>(null);
 
   // Main chart refs
@@ -220,6 +223,8 @@ export function TradingChart(): React.ReactElement {
   const addDrawing = useChartStore((s) => s.addDrawing);
   const drawingColor = useChartStore((s) => s.drawingColor);
   const setActiveDrawingTool = useChartStore((s) => s.setActiveDrawingTool);
+  const updateLastIndicatorValues = useChartStore((s) => s.updateLastIndicatorValues);
+  const lastIndicatorValues = useChartStore((s) => s.lastIndicatorValues);
 
   // Memoize RSI enabled state to prevent unnecessary recalculations
   const hasActiveRSI = useMemo(() => showRSIPanel && rsiConfigs.some((r) => r.enabled), [showRSIPanel, rsiConfigs]);
@@ -717,7 +722,119 @@ export function TradingChart(): React.ReactElement {
       const obvData = calculateOBV(candles);
       subChartsRef.current.obvSeries?.setData(obvData);
     }
+
+    // Update last indicator values for display when not hovering
+    updateLastValues(candles);
   }, [movingAverages, rsiConfigs, macd, stochastic, atr, adx, obv, updateMASeries, updateIchimokuSeries, updateOverlayIndicators]);
+
+  // Update last indicator values from candle data
+  const updateLastValues = useCallback((candles: CandleData[]) => {
+    if (candles.length === 0) return;
+
+    const lastValues: Parameters<typeof updateLastIndicatorValues>[0] = {
+      ma: {},
+      rsi: {},
+    };
+
+    // Calculate last MA values
+    movingAverages.filter(ma => ma.enabled).forEach(ma => {
+      const data = ma.type === 'sma'
+        ? calculateSMA(candles, ma.period)
+        : calculateEMA(candles, ma.period);
+      if (data.length > 0) {
+        lastValues.ma![ma.id] = data[data.length - 1].value;
+      }
+    });
+
+    // Calculate last Bollinger Bands values
+    if (bollingerBands.enabled) {
+      const bbData = calculateBollingerBands(candles, bollingerBands.period, bollingerBands.stdDev);
+      if (bbData.upper.length > 0) {
+        lastValues.bollingerBands = {
+          upper: bbData.upper[bbData.upper.length - 1].value,
+          middle: bbData.middle[bbData.middle.length - 1].value,
+          lower: bbData.lower[bbData.lower.length - 1].value,
+        };
+      }
+    }
+
+    // Calculate last VWAP value
+    if (vwap.enabled) {
+      const vwapData = calculateVWAP(candles, vwap.stdDevMultiplier);
+      if (vwapData.vwap.length > 0) {
+        lastValues.vwap = vwapData.vwap[vwapData.vwap.length - 1].value;
+      }
+    }
+
+    // Calculate last Supertrend value
+    if (supertrend.enabled) {
+      const stData = calculateSupertrend(candles, supertrend.period, supertrend.multiplier);
+      if (stData.supertrend.length > 0) {
+        lastValues.supertrend = stData.supertrend[stData.supertrend.length - 1].value;
+      }
+    }
+
+    // Calculate last RSI values
+    rsiConfigs.filter(rsi => rsi.enabled).forEach(rsi => {
+      const data = calculateRSI(candles, rsi.period);
+      if (data.length > 0) {
+        lastValues.rsi![rsi.id] = data[data.length - 1].value;
+      }
+    });
+
+    // Calculate last MACD values
+    if (macd.enabled) {
+      const macdData = calculateMACD(candles, macd.fastPeriod, macd.slowPeriod, macd.signalPeriod);
+      if (macdData.macd.length > 0) {
+        lastValues.macd = {
+          macd: macdData.macd[macdData.macd.length - 1].value,
+          signal: macdData.signal[macdData.signal.length - 1].value,
+          histogram: macdData.histogram[macdData.histogram.length - 1].value,
+        };
+      }
+    }
+
+    // Calculate last Stochastic values
+    if (stochastic.enabled) {
+      const stochData = calculateStochastic(candles, stochastic.kPeriod, stochastic.dPeriod, stochastic.smooth);
+      if (stochData.k.length > 0) {
+        lastValues.stochastic = {
+          k: stochData.k[stochData.k.length - 1].value,
+          d: stochData.d[stochData.d.length - 1].value,
+        };
+      }
+    }
+
+    // Calculate last ATR value
+    if (atr.enabled) {
+      const atrData = calculateATR(candles, atr.period);
+      if (atrData.length > 0) {
+        lastValues.atr = atrData[atrData.length - 1].value;
+      }
+    }
+
+    // Calculate last ADX values
+    if (adx.enabled) {
+      const adxData = calculateADX(candles, adx.period);
+      if (adxData.adx.length > 0) {
+        lastValues.adx = {
+          adx: adxData.adx[adxData.adx.length - 1].value,
+          plusDI: adxData.plusDI[adxData.plusDI.length - 1].value,
+          minusDI: adxData.minusDI[adxData.minusDI.length - 1].value,
+        };
+      }
+    }
+
+    // Calculate last OBV value
+    if (obv.enabled) {
+      const obvData = calculateOBV(candles);
+      if (obvData.length > 0) {
+        lastValues.obv = obvData[obvData.length - 1].value;
+      }
+    }
+
+    updateLastIndicatorValues(lastValues);
+  }, [movingAverages, bollingerBands, vwap, supertrend, rsiConfigs, macd, stochastic, atr, adx, obv, updateLastIndicatorValues]);
 
   // Fetch candle data - only depends on symbol and interval
   const fetchCandles = useCallback(async () => {
@@ -1473,11 +1590,15 @@ export function TradingChart(): React.ReactElement {
       {/* Right: Controls (Drawing tools + Indicators button) */}
       <ChartControls
         onOpenSettings={() => setSettingsOpen(true)}
+        onOpenDrawingTools={() => setDrawingToolsOpen(true)}
         activeDrawingTool={activeDrawingTool}
       />
 
       {/* Settings Panel */}
       <IndicatorSettingsPanel isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
+
+      {/* Drawing Tools Panel */}
+      <DrawingToolsPanel isOpen={drawingToolsOpen} onClose={() => setDrawingToolsOpen(false)} />
 
       {/* Loading overlay */}
       {loading && (
@@ -1515,10 +1636,13 @@ export function TradingChart(): React.ReactElement {
 
         {/* RSI chart */}
         {hasActiveRSI && (
-          <div className="border-t border-border/50 mt-1 pt-1">
-            <div className="text-xs text-muted-foreground mb-1 px-2">
-              RSI ({rsiConfigs.filter((r) => r.enabled).map((r) => r.period).join(', ')})
-            </div>
+          <div className="border-t border-border/50 mt-1 pt-1 relative">
+            <SubPanelLegend
+              indicatorType="rsi"
+              label=""
+              lastValue={lastIndicatorValues}
+              config={{ rsiConfigs }}
+            />
             <div
               ref={rsiContainerRef}
               className="w-full"
@@ -1529,10 +1653,13 @@ export function TradingChart(): React.ReactElement {
 
         {/* MACD chart */}
         {macd.enabled && (
-          <div className="border-t border-border/50 mt-1 pt-1">
-            <div className="text-xs text-muted-foreground mb-1 px-2">
-              MACD ({macd.fastPeriod}, {macd.slowPeriod}, {macd.signalPeriod})
-            </div>
+          <div className="border-t border-border/50 mt-1 pt-1 relative">
+            <SubPanelLegend
+              indicatorType="macd"
+              label=""
+              lastValue={lastIndicatorValues}
+              config={{ macd }}
+            />
             <div
               ref={macdContainerRef}
               className="w-full"
@@ -1543,10 +1670,13 @@ export function TradingChart(): React.ReactElement {
 
         {/* Stochastic chart */}
         {stochastic.enabled && (
-          <div className="border-t border-border/50 mt-1 pt-1">
-            <div className="text-xs text-muted-foreground mb-1 px-2">
-              Stochastic ({stochastic.kPeriod}, {stochastic.dPeriod}, {stochastic.smooth})
-            </div>
+          <div className="border-t border-border/50 mt-1 pt-1 relative">
+            <SubPanelLegend
+              indicatorType="stochastic"
+              label=""
+              lastValue={lastIndicatorValues}
+              config={{ stochastic }}
+            />
             <div
               ref={stochasticContainerRef}
               className="w-full"
@@ -1557,10 +1687,13 @@ export function TradingChart(): React.ReactElement {
 
         {/* ATR chart */}
         {atr.enabled && (
-          <div className="border-t border-border/50 mt-1 pt-1">
-            <div className="text-xs text-muted-foreground mb-1 px-2">
-              ATR ({atr.period})
-            </div>
+          <div className="border-t border-border/50 mt-1 pt-1 relative">
+            <SubPanelLegend
+              indicatorType="atr"
+              label=""
+              lastValue={lastIndicatorValues}
+              config={{ atr }}
+            />
             <div
               ref={atrContainerRef}
               className="w-full"
@@ -1571,10 +1704,13 @@ export function TradingChart(): React.ReactElement {
 
         {/* ADX chart */}
         {adx.enabled && (
-          <div className="border-t border-border/50 mt-1 pt-1">
-            <div className="text-xs text-muted-foreground mb-1 px-2">
-              ADX ({adx.period}) {adx.showDI && '+ DI'}
-            </div>
+          <div className="border-t border-border/50 mt-1 pt-1 relative">
+            <SubPanelLegend
+              indicatorType="adx"
+              label=""
+              lastValue={lastIndicatorValues}
+              config={{ adx }}
+            />
             <div
               ref={adxContainerRef}
               className="w-full"
@@ -1585,10 +1721,12 @@ export function TradingChart(): React.ReactElement {
 
         {/* OBV chart */}
         {obv.enabled && (
-          <div className="border-t border-border/50 mt-1 pt-1">
-            <div className="text-xs text-muted-foreground mb-1 px-2">
-              OBV (On-Balance Volume)
-            </div>
+          <div className="border-t border-border/50 mt-1 pt-1 relative">
+            <SubPanelLegend
+              indicatorType="obv"
+              label=""
+              lastValue={lastIndicatorValues}
+            />
             <div
               ref={obvContainerRef}
               className="w-full"

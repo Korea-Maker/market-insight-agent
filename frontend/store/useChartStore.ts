@@ -81,6 +81,22 @@ type IndicatorKey =
   | 'parabolicSAR'
   | 'emaRibbon';
 
+// Last indicator values for display when not hovering
+export interface LastIndicatorValues {
+  // Overlay indicators
+  ma: Record<string, number>;
+  bollingerBands?: { upper: number; middle: number; lower: number };
+  vwap?: number;
+  supertrend?: number;
+  // Oscillators
+  rsi: Record<string, number>;
+  macd?: { macd: number; signal: number; histogram: number };
+  stochastic?: { k: number; d: number };
+  atr?: number;
+  adx?: { adx: number; plusDI: number; minusDI: number };
+  obv?: number;
+}
+
 interface ChartState {
   // Basic state
   symbol: string;
@@ -108,6 +124,9 @@ interface ChartState {
   obv: OBVConfig;
   parabolicSAR: ParabolicSARConfig;
   emaRibbon: EMARibbonConfig;
+
+  // Last indicator values (for display when not hovering)
+  lastIndicatorValues: LastIndicatorValues;
 
   // Drawing tools
   activeDrawingTool: DrawingToolType | null;
@@ -168,6 +187,9 @@ interface ChartActions {
   updateEMARibbon: (updates: Partial<EMARibbonConfig>) => void;
   toggleEMARibbon: () => void;
 
+  // Last indicator values
+  updateLastIndicatorValues: (values: Partial<LastIndicatorValues>) => void;
+
   // Drawing tools
   setActiveDrawingTool: (tool: DrawingToolType | null) => void;
   addDrawing: (drawing: Omit<DrawingObject, 'id'>) => void;
@@ -205,6 +227,11 @@ const initialState: ChartState = {
   obv: DEFAULT_OBV,
   parabolicSAR: DEFAULT_PARABOLIC_SAR,
   emaRibbon: DEFAULT_EMA_RIBBON,
+
+  lastIndicatorValues: {
+    ma: {},
+    rsi: {},
+  },
 
   activeDrawingTool: null,
   drawings: [],
@@ -335,6 +362,24 @@ export const useChartStore = create<ChartStore>()(
       toggleParabolicSAR: () => get().toggleIndicator('parabolicSAR'),
       updateEMARibbon: (updates) => get().updateIndicator('emaRibbon', updates),
       toggleEMARibbon: () => get().toggleIndicator('emaRibbon'),
+
+      // Last indicator values
+      updateLastIndicatorValues: (values) => {
+        set({
+          lastIndicatorValues: {
+            ...get().lastIndicatorValues,
+            ...values,
+            ma: {
+              ...get().lastIndicatorValues.ma,
+              ...(values.ma || {}),
+            },
+            rsi: {
+              ...get().lastIndicatorValues.rsi,
+              ...(values.rsi || {}),
+            },
+          },
+        });
+      },
 
       // Drawing actions
       setActiveDrawingTool: (tool) => set({ activeDrawingTool: tool }),

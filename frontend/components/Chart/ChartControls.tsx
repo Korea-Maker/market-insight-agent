@@ -1,16 +1,18 @@
 "use client";
 
 import { Button } from '@/components/ui/button';
-import { Settings2, Minus, TrendingUp } from 'lucide-react';
+import { Settings2, Minus, TrendingUp, Pencil } from 'lucide-react';
 import { DrawingToolType, useChartStore } from '@/store/useChartStore';
 
 interface ChartControlsProps {
   onOpenSettings: () => void;
+  onOpenDrawingTools: () => void;
   activeDrawingTool: DrawingToolType | null;
 }
 
 export function ChartControls({
   onOpenSettings,
+  onOpenDrawingTools,
   activeDrawingTool,
 }: ChartControlsProps): React.ReactElement {
   const setActiveDrawingTool = useChartStore((s) => s.setActiveDrawingTool);
@@ -18,6 +20,7 @@ export function ChartControls({
   const ichimoku = useChartStore((s) => s.ichimoku);
   const rsiConfigs = useChartStore((s) => s.rsiConfigs);
   const macd = useChartStore((s) => s.macd);
+  const drawings = useChartStore((s) => s.drawings);
 
   // Count active indicators
   const activeIndicatorCount =
@@ -48,7 +51,23 @@ export function ChartControls({
         >
           <TrendingUp className="h-3.5 w-3.5" />
         </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onOpenDrawingTools}
+          className="h-7 w-7 p-0"
+          title="More Drawing Tools"
+        >
+          <Pencil className="h-3.5 w-3.5" />
+        </Button>
       </div>
+
+      {/* Drawings Count Badge */}
+      {drawings.length > 0 && (
+        <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded-full">
+          {drawings.length}
+        </span>
+      )}
 
       {/* Settings Button */}
       <Button
