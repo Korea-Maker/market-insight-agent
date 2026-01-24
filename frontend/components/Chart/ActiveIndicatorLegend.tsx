@@ -347,7 +347,8 @@ export function ActiveIndicatorLegend({
     return oscillators;
   }, [showRSIPanel, rsiConfigs, macd, stochastic, atr, adx, obv, crosshairData, lastIndicatorValues, getDisplayValue]);
 
-  const hasIndicators = enabledOverlays.length > 0 || enabledOscillators.length > 0;
+  // Only show overlays in Main Layout; oscillators are shown in their respective Sub Panels
+  const hasIndicators = enabledOverlays.length > 0;
 
   return (
     <>
@@ -405,16 +406,7 @@ export function ActiveIndicatorLegend({
               />
             ))}
 
-            {/* Oscillators */}
-            {enabledOscillators.map((indicator, idx) => (
-              <IndicatorRow
-                key={`osc-${indicator.type}-${indicator.id || idx}`}
-                label={indicator.label}
-                color={indicator.color}
-                value={indicator.value}
-                onDoubleClick={() => handleEdit(indicator.type, indicator.id, indicator.config)}
-              />
-            ))}
+            {/* Oscillators are displayed in their respective Sub Panels via SubPanelLegend */}
           </div>
         )}
       </div>
