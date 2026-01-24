@@ -1,6 +1,6 @@
 "use client";
 
-import { TradingChart } from '@/components/Chart/TradingChart';
+import { ChartTabs } from '@/components/Chart/ChartTabs';
 import { MarketTicker } from '@/components/Header/MarketTicker';
 import MarketInsightPanel from '@/components/Analysis/MarketInsightPanel';
 import { motion } from 'framer-motion';
@@ -70,7 +70,7 @@ export default function DashboardPage() {
             <div className="absolute top-4 right-4 z-10 opactiy-50 hover:opacity-100 transition-opacity">
                {/* Chart controls placeholder */}
             </div>
-            <TradingChart />
+            <ChartTabs />
           </div>
         </motion.div>
         

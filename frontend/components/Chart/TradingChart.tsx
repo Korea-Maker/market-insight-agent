@@ -1064,7 +1064,7 @@ export function TradingChart(): React.ReactElement {
               type: 'horizontalLine',
               price,
               color,
-              lineWidth: 1,
+              lineWidth: useChartStore.getState().drawingLineWidth,
             });
             useChartStore.getState().setActiveDrawingTool(null);
           }
@@ -1076,7 +1076,7 @@ export function TradingChart(): React.ReactElement {
               type: 'verticalLine',
               startTime: time,
               color,
-              lineWidth: 1,
+              lineWidth: useChartStore.getState().drawingLineWidth,
             });
             useChartStore.getState().setActiveDrawingTool(null);
           }
@@ -1097,7 +1097,7 @@ export function TradingChart(): React.ReactElement {
                 endTime: time,
                 endPrice: price,
                 color,
-                lineWidth: 1,
+                lineWidth: useChartStore.getState().drawingLineWidth,
               });
               pendingDrawingRef.current = null;
               useChartStore.getState().setActiveDrawingTool(null);
