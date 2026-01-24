@@ -14,13 +14,16 @@ import {
   LineSeries,
   CrosshairMode,
   MouseEventParams,
-  PriceLineOptions,
   LineStyle,
 } from 'lightweight-charts';
 import { usePriceStore } from '@/store/usePriceStore';
 import { useChartStore, TimeInterval, MovingAverageConfig } from '@/store/useChartStore';
 import { ChartControls } from './ChartControls';
 import { IndicatorSettingsPanel } from './IndicatorSettingsPanel';
+import { ActiveIndicatorLegend, CrosshairData } from './ActiveIndicatorLegend';
+import { SubPanelLegend } from './SubPanelLegend';
+import { DrawingToolsPanel } from './DrawingToolsPanel';
+import { IndicatorEditModal, EditableIndicatorType } from './IndicatorEditModal';
 import {
   calculateSMA,
   calculateEMA,
@@ -120,6 +123,24 @@ interface OverlaySeriesRefs {
 export function TradingChart(): React.ReactElement {
   // UI State
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [drawingToolsOpen, setDrawingToolsOpen] = useState(false);
+  const [crosshairData, setCrosshairData] = useState<CrosshairData | null>(null);
+
+  // Edit modal state for SubPanelLegend oscillators
+  const [subPanelEditModal, setSubPanelEditModal] = useState<{
+    isOpen: boolean;
+    type: EditableIndicatorType;
+    id?: string;
+    config: Record<string, unknown>;
+  }>({ isOpen: false, type: 'rsi', config: {} });
+
+  // Pending drawing ref for multi-click tools (trendLine, rectangle, etc.)
+  // Using ref instead of state to avoid stale closure issues in click handlers
+  const pendingDrawingRef = useRef<{
+    type: string;
+    startTime?: number;
+    startPrice?: number;
+  } | null>(null);
 
   // Main chart refs
   const mainContainerRef = useRef<HTMLDivElement>(null);
@@ -183,6 +204,9 @@ export function TradingChart(): React.ReactElement {
   // Horizontal line refs for drawings
   const horizontalLinesRef = useRef<Map<string, ReturnType<ISeriesApi<'Candlestick'>['createPriceLine']>>>(new Map());
 
+  // TrendLine series refs for drawings
+  const trendLineSeriesRef = useRef<Map<string, ISeriesApi<'Line'>>>(new Map());
+
   // Current candle tracking (for real-time updates)
   const currentCandleRef = useRef<CandleData | null>(null);
   const currentCandleTimeRef = useRef<number>(0);
@@ -219,36 +243,80 @@ export function TradingChart(): React.ReactElement {
   const addDrawing = useChartStore((s) => s.addDrawing);
   const drawingColor = useChartStore((s) => s.drawingColor);
   const setActiveDrawingTool = useChartStore((s) => s.setActiveDrawingTool);
+  const updateLastIndicatorValues = useChartStore((s) => s.updateLastIndicatorValues);
+  const lastIndicatorValues = useChartStore((s) => s.lastIndicatorValues);
+
+  // Store actions for editing indicators (used by SubPanelLegend edit modal)
+  const updateRSI = useChartStore((s) => s.updateRSI);
+  const removeRSI = useChartStore((s) => s.removeRSI);
+  const updateMACD = useChartStore((s) => s.updateMACD);
+  const updateStochastic = useChartStore((s) => s.updateStochastic);
+  const updateATR = useChartStore((s) => s.updateATR);
+  const updateADX = useChartStore((s) => s.updateADX);
+
+  // Handle edit from SubPanelLegend
+  const handleSubPanelEdit = useCallback((type: EditableIndicatorType, id?: string, config?: object) => {
+    setSubPanelEditModal({
+      isOpen: true,
+      type,
+      id,
+      config: (config || {}) as Record<string, unknown>,
+    });
+  }, []);
+
+  // Handle save from SubPanelLegend edit modal
+  const handleSubPanelSave = useCallback((config: Record<string, unknown>) => {
+    const { type, id } = subPanelEditModal;
+
+    switch (type) {
+      case 'rsi':
+        if (id) updateRSI(id, config);
+        break;
+      case 'macd':
+        updateMACD(config);
+        break;
+      case 'stochastic':
+        updateStochastic(config);
+        break;
+      case 'atr':
+        updateATR(config);
+        break;
+      case 'adx':
+        updateADX(config);
+        break;
+    }
+  }, [subPanelEditModal, updateRSI, updateMACD, updateStochastic, updateATR, updateADX]);
+
+  // Handle delete from SubPanelLegend edit modal (RSI only)
+  const handleSubPanelDelete = useCallback(() => {
+    const { type, id } = subPanelEditModal;
+    if (type === 'rsi' && id) {
+      removeRSI(id);
+    }
+  }, [subPanelEditModal, removeRSI]);
 
   // Memoize RSI enabled state to prevent unnecessary recalculations
   const hasActiveRSI = useMemo(() => showRSIPanel && rsiConfigs.some((r) => r.enabled), [showRSIPanel, rsiConfigs]);
 
-  // Calculate chart heights based on enabled sub-panels
-  const chartHeights = useMemo(() => {
-    const hasRSI = hasActiveRSI;
-    const hasMACD = macd.enabled;
-    const hasStochastic = stochastic.enabled;
-    const hasATR = atr.enabled;
-    const hasADX = adx.enabled;
-    const hasOBV = obv.enabled;
+  // Reset pending drawing when tool changes
+  useEffect(() => {
+    if (!activeDrawingTool) {
+      pendingDrawingRef.current = null;
+    }
+  }, [activeDrawingTool]);
 
-    const subPanelCount = [hasRSI, hasMACD, hasStochastic, hasATR, hasADX, hasOBV].filter(Boolean).length;
-
-    // Calculate heights based on number of sub-panels
-    const subPanelHeight = subPanelCount > 0 ? Math.min(20, 60 / subPanelCount) : 0;
-    const mainHeight = 100 - (subPanelCount * subPanelHeight);
-
-    return {
-      main: `${mainHeight}%`,
-      subPanel: `${subPanelHeight}%`,
-      rsi: hasRSI ? `${subPanelHeight}%` : '0%',
-      macd: hasMACD ? `${subPanelHeight}%` : '0%',
-      stochastic: hasStochastic ? `${subPanelHeight}%` : '0%',
-      atr: hasATR ? `${subPanelHeight}%` : '0%',
-      adx: hasADX ? `${subPanelHeight}%` : '0%',
-      obv: hasOBV ? `${subPanelHeight}%` : '0%',
-    };
+  // Calculate sub-panel count for responsive sizing
+  const subPanelCount = useMemo(() => {
+    return [hasActiveRSI, macd.enabled, stochastic.enabled, atr.enabled, adx.enabled, obv.enabled].filter(Boolean).length;
   }, [hasActiveRSI, macd.enabled, stochastic.enabled, atr.enabled, adx.enabled, obv.enabled]);
+
+  // Dynamic sub-panel height based on count (more panels = smaller height each)
+  const subPanelHeight = useMemo(() => {
+    if (subPanelCount === 0) return 100;
+    if (subPanelCount <= 2) return 100;
+    if (subPanelCount <= 4) return 85;
+    return 70; // 5-6 panels
+  }, [subPanelCount]);
 
   // Create sub-chart (RSI or MACD)
   const createSubChart = useCallback((container: HTMLDivElement, showTimeScale = false): IChartApi => {
@@ -319,6 +387,7 @@ export function TradingChart(): React.ReactElement {
           lineWidth: config.lineWidth as 1 | 2 | 3 | 4,
           priceLineVisible: false,
           lastValueVisible: false,
+          crosshairMarkerVisible: false,
           visible: config.enabled,
         });
 
@@ -373,6 +442,7 @@ export function TradingChart(): React.ReactElement {
           lineWidth: 1,
           priceLineVisible: false,
           lastValueVisible: false,
+          crosshairMarkerVisible: false,
         });
       }
       ichimokuRefs.current.tenkanSen.setData(ichimokuData.tenkanSen);
@@ -389,6 +459,7 @@ export function TradingChart(): React.ReactElement {
           lineWidth: 1,
           priceLineVisible: false,
           lastValueVisible: false,
+          crosshairMarkerVisible: false,
         });
       }
       ichimokuRefs.current.kijunSen.setData(ichimokuData.kijunSen);
@@ -405,6 +476,7 @@ export function TradingChart(): React.ReactElement {
           lineWidth: 1,
           priceLineVisible: false,
           lastValueVisible: false,
+          crosshairMarkerVisible: false,
         });
       }
       ichimokuRefs.current.senkouSpanA.setData(ichimokuData.senkouSpanA);
@@ -421,6 +493,7 @@ export function TradingChart(): React.ReactElement {
           lineWidth: 1,
           priceLineVisible: false,
           lastValueVisible: false,
+          crosshairMarkerVisible: false,
         });
       }
       ichimokuRefs.current.senkouSpanB.setData(ichimokuData.senkouSpanB);
@@ -437,6 +510,7 @@ export function TradingChart(): React.ReactElement {
           lineWidth: 1,
           priceLineVisible: false,
           lastValueVisible: false,
+          crosshairMarkerVisible: false,
         });
       }
       ichimokuRefs.current.chikouSpan.setData(ichimokuData.chikouSpan);
@@ -461,6 +535,7 @@ export function TradingChart(): React.ReactElement {
           lineWidth: 1,
           priceLineVisible: false,
           lastValueVisible: false,
+          crosshairMarkerVisible: false,
         });
       }
       overlaySeriesRef.current.bbUpper.setData(bbData.upper);
@@ -471,6 +546,7 @@ export function TradingChart(): React.ReactElement {
           lineWidth: 1,
           priceLineVisible: false,
           lastValueVisible: false,
+          crosshairMarkerVisible: false,
         });
       }
       overlaySeriesRef.current.bbMiddle.setData(bbData.middle);
@@ -481,6 +557,7 @@ export function TradingChart(): React.ReactElement {
           lineWidth: 1,
           priceLineVisible: false,
           lastValueVisible: false,
+          crosshairMarkerVisible: false,
         });
       }
       overlaySeriesRef.current.bbLower.setData(bbData.lower);
@@ -508,7 +585,8 @@ export function TradingChart(): React.ReactElement {
           color: INDICATOR_COLORS.vwap,
           lineWidth: 2,
           priceLineVisible: false,
-          lastValueVisible: true,
+          lastValueVisible: false,
+          crosshairMarkerVisible: false,
         });
       }
       overlaySeriesRef.current.vwapLine.setData(vwapData.vwap);
@@ -520,6 +598,7 @@ export function TradingChart(): React.ReactElement {
             lineWidth: 1,
             priceLineVisible: false,
             lastValueVisible: false,
+            crosshairMarkerVisible: false,
           });
         }
         overlaySeriesRef.current.vwapUpper.setData(vwapData.upperBand);
@@ -530,6 +609,7 @@ export function TradingChart(): React.ReactElement {
             lineWidth: 1,
             priceLineVisible: false,
             lastValueVisible: false,
+            crosshairMarkerVisible: false,
           });
         }
         overlaySeriesRef.current.vwapLower.setData(vwapData.lowerBand);
@@ -567,7 +647,8 @@ export function TradingChart(): React.ReactElement {
           color: INDICATOR_COLORS.supertrendUp,
           lineWidth: 2,
           priceLineVisible: false,
-          lastValueVisible: true,
+          lastValueVisible: false,
+          crosshairMarkerVisible: false,
         });
       }
 
@@ -605,6 +686,7 @@ export function TradingChart(): React.ReactElement {
             lineWidth: 1,
             priceLineVisible: false,
             lastValueVisible: false,
+            crosshairMarkerVisible: false,
           });
           overlaySeriesRef.current.emaRibbonSeries[idx] = series;
         }
@@ -702,7 +784,119 @@ export function TradingChart(): React.ReactElement {
       const obvData = calculateOBV(candles);
       subChartsRef.current.obvSeries?.setData(obvData);
     }
+
+    // Update last indicator values for display when not hovering
+    updateLastValues(candles);
   }, [movingAverages, rsiConfigs, macd, stochastic, atr, adx, obv, updateMASeries, updateIchimokuSeries, updateOverlayIndicators]);
+
+  // Update last indicator values from candle data
+  const updateLastValues = useCallback((candles: CandleData[]) => {
+    if (candles.length === 0) return;
+
+    const lastValues: Parameters<typeof updateLastIndicatorValues>[0] = {
+      ma: {},
+      rsi: {},
+    };
+
+    // Calculate last MA values
+    movingAverages.filter(ma => ma.enabled).forEach(ma => {
+      const data = ma.type === 'sma'
+        ? calculateSMA(candles, ma.period)
+        : calculateEMA(candles, ma.period);
+      if (data.length > 0) {
+        lastValues.ma![ma.id] = data[data.length - 1].value;
+      }
+    });
+
+    // Calculate last Bollinger Bands values
+    if (bollingerBands.enabled) {
+      const bbData = calculateBollingerBands(candles, bollingerBands.period, bollingerBands.stdDev);
+      if (bbData.upper.length > 0) {
+        lastValues.bollingerBands = {
+          upper: bbData.upper[bbData.upper.length - 1].value,
+          middle: bbData.middle[bbData.middle.length - 1].value,
+          lower: bbData.lower[bbData.lower.length - 1].value,
+        };
+      }
+    }
+
+    // Calculate last VWAP value
+    if (vwap.enabled) {
+      const vwapData = calculateVWAP(candles, vwap.stdDevMultiplier);
+      if (vwapData.vwap.length > 0) {
+        lastValues.vwap = vwapData.vwap[vwapData.vwap.length - 1].value;
+      }
+    }
+
+    // Calculate last Supertrend value
+    if (supertrend.enabled) {
+      const stData = calculateSupertrend(candles, supertrend.period, supertrend.multiplier);
+      if (stData.supertrend.length > 0) {
+        lastValues.supertrend = stData.supertrend[stData.supertrend.length - 1].value;
+      }
+    }
+
+    // Calculate last RSI values
+    rsiConfigs.filter(rsi => rsi.enabled).forEach(rsi => {
+      const data = calculateRSI(candles, rsi.period);
+      if (data.length > 0) {
+        lastValues.rsi![rsi.id] = data[data.length - 1].value;
+      }
+    });
+
+    // Calculate last MACD values
+    if (macd.enabled) {
+      const macdData = calculateMACD(candles, macd.fastPeriod, macd.slowPeriod, macd.signalPeriod);
+      if (macdData.macd.length > 0) {
+        lastValues.macd = {
+          macd: macdData.macd[macdData.macd.length - 1].value,
+          signal: macdData.signal[macdData.signal.length - 1].value,
+          histogram: macdData.histogram[macdData.histogram.length - 1].value,
+        };
+      }
+    }
+
+    // Calculate last Stochastic values
+    if (stochastic.enabled) {
+      const stochData = calculateStochastic(candles, stochastic.kPeriod, stochastic.dPeriod, stochastic.smooth);
+      if (stochData.k.length > 0) {
+        lastValues.stochastic = {
+          k: stochData.k[stochData.k.length - 1].value,
+          d: stochData.d[stochData.d.length - 1].value,
+        };
+      }
+    }
+
+    // Calculate last ATR value
+    if (atr.enabled) {
+      const atrData = calculateATR(candles, atr.period);
+      if (atrData.length > 0) {
+        lastValues.atr = atrData[atrData.length - 1].value;
+      }
+    }
+
+    // Calculate last ADX values
+    if (adx.enabled) {
+      const adxData = calculateADX(candles, adx.period);
+      if (adxData.adx.length > 0) {
+        lastValues.adx = {
+          adx: adxData.adx[adxData.adx.length - 1].value,
+          plusDI: adxData.plusDI[adxData.plusDI.length - 1].value,
+          minusDI: adxData.minusDI[adxData.minusDI.length - 1].value,
+        };
+      }
+    }
+
+    // Calculate last OBV value
+    if (obv.enabled) {
+      const obvData = calculateOBV(candles);
+      if (obvData.length > 0) {
+        lastValues.obv = obvData[obvData.length - 1].value;
+      }
+    }
+
+    updateLastIndicatorValues(lastValues);
+  }, [movingAverages, bollingerBands, vwap, supertrend, rsiConfigs, macd, stochastic, atr, adx, obv, updateLastIndicatorValues]);
 
   // Fetch candle data - only depends on symbol and interval
   const fetchCandles = useCallback(async () => {
@@ -848,6 +1042,7 @@ export function TradingChart(): React.ReactElement {
       lineWidth: 1,
       priceLineVisible: false,
       lastValueVisible: false,
+      crosshairMarkerVisible: false,
       priceScaleId: 'volume',
     });
     volumeMASeriesRef.current = volumeMASeries;
@@ -857,18 +1052,113 @@ export function TradingChart(): React.ReactElement {
       const currentTool = useChartStore.getState().activeDrawingTool;
       const color = useChartStore.getState().drawingColor;
 
-      if (currentTool === 'horizontalLine' && param.point && candleSeriesRef.current) {
-        const price = candleSeries.coordinateToPrice(param.point.y);
-        if (price !== null) {
-          useChartStore.getState().addDrawing({
-            type: 'horizontalLine',
-            price,
-            color,
-            lineWidth: 1,
-          });
-          useChartStore.getState().setActiveDrawingTool(null);
+      if (!currentTool || !param.point || !candleSeriesRef.current) return;
+
+      const price = candleSeries.coordinateToPrice(param.point.y);
+      const time = param.time as number;
+
+      switch (currentTool) {
+        case 'horizontalLine':
+          if (price !== null) {
+            useChartStore.getState().addDrawing({
+              type: 'horizontalLine',
+              price,
+              color,
+              lineWidth: 1,
+            });
+            useChartStore.getState().setActiveDrawingTool(null);
+          }
+          break;
+
+        case 'verticalLine':
+          if (time) {
+            useChartStore.getState().addDrawing({
+              type: 'verticalLine',
+              startTime: time,
+              color,
+              lineWidth: 1,
+            });
+            useChartStore.getState().setActiveDrawingTool(null);
+          }
+          break;
+
+        case 'trendLine':
+          if (price !== null && time) {
+            const pending = pendingDrawingRef.current;
+            if (!pending || pending.type !== 'trendLine') {
+              // First click - set start point
+              pendingDrawingRef.current = { type: 'trendLine', startTime: time, startPrice: price };
+            } else {
+              // Second click - complete the line
+              useChartStore.getState().addDrawing({
+                type: 'trendLine',
+                startTime: pending.startTime,
+                startPrice: pending.startPrice,
+                endTime: time,
+                endPrice: price,
+                color,
+                lineWidth: 1,
+              });
+              pendingDrawingRef.current = null;
+              useChartStore.getState().setActiveDrawingTool(null);
+            }
+          }
+          break;
+      }
+    });
+
+    // Crosshair move handler for indicator values
+    chart.subscribeCrosshairMove((param) => {
+      if (!param.time || !param.seriesData) {
+        setCrosshairData(null);
+        return;
+      }
+
+      const values: CrosshairData['values'] = {
+        ma: {},
+        rsi: {},
+      };
+
+      // Extract MA values
+      maSeriesRefs.current.forEach((ref) => {
+        const data = param.seriesData.get(ref.series);
+        if (data && 'value' in data && typeof data.value === 'number') {
+          values.ma[ref.id] = data.value;
+        }
+      });
+
+      // Extract overlay indicator values
+      if (overlaySeriesRef.current.bbMiddle) {
+        const upper = param.seriesData.get(overlaySeriesRef.current.bbUpper!);
+        const middle = param.seriesData.get(overlaySeriesRef.current.bbMiddle);
+        const lower = param.seriesData.get(overlaySeriesRef.current.bbLower!);
+        if (upper && middle && lower && 'value' in upper && 'value' in middle && 'value' in lower) {
+          values.bollingerBands = {
+            upper: upper.value as number,
+            middle: middle.value as number,
+            lower: lower.value as number,
+          };
         }
       }
+
+      if (overlaySeriesRef.current.vwapLine) {
+        const vwapData = param.seriesData.get(overlaySeriesRef.current.vwapLine);
+        if (vwapData && 'value' in vwapData) {
+          values.vwap = vwapData.value as number;
+        }
+      }
+
+      if (overlaySeriesRef.current.supertrendLine) {
+        const stData = param.seriesData.get(overlaySeriesRef.current.supertrendLine);
+        if (stData && 'value' in stData) {
+          values.supertrend = stData.value as number;
+        }
+      }
+
+      setCrosshairData({
+        time: param.time as number,
+        values,
+      });
     });
 
     // ResizeObserver
@@ -919,6 +1209,7 @@ export function TradingChart(): React.ReactElement {
         color: config.color,
         lineWidth: 1,
         priceLineVisible: false,
+        crosshairMarkerVisible: false,
       });
 
       subChartsRef.current.rsiSeries.push({ id: config.id, series: rsiSeries });
@@ -988,6 +1279,7 @@ export function TradingChart(): React.ReactElement {
       color: INDICATOR_COLORS.macdLine,
       lineWidth: 1,
       priceLineVisible: false,
+      crosshairMarkerVisible: false,
     });
     subChartsRef.current.macdLine = macdLine;
 
@@ -996,6 +1288,7 @@ export function TradingChart(): React.ReactElement {
       color: INDICATOR_COLORS.macdSignal,
       lineWidth: 1,
       priceLineVisible: false,
+      crosshairMarkerVisible: false,
     });
     subChartsRef.current.macdSignal = signalLine;
 
@@ -1055,6 +1348,7 @@ export function TradingChart(): React.ReactElement {
       color: INDICATOR_COLORS.stochasticK,
       lineWidth: 1,
       priceLineVisible: false,
+      crosshairMarkerVisible: false,
     });
     subChartsRef.current.stochasticK = kLine;
 
@@ -1063,6 +1357,7 @@ export function TradingChart(): React.ReactElement {
       color: INDICATOR_COLORS.stochasticD,
       lineWidth: 1,
       priceLineVisible: false,
+      crosshairMarkerVisible: false,
     });
     subChartsRef.current.stochasticD = dLine;
 
@@ -1116,6 +1411,7 @@ export function TradingChart(): React.ReactElement {
       color: INDICATOR_COLORS.atr,
       lineWidth: 1,
       priceLineVisible: false,
+      crosshairMarkerVisible: false,
     });
     subChartsRef.current.atrSeries = atrLine;
 
@@ -1168,6 +1464,7 @@ export function TradingChart(): React.ReactElement {
       color: '#FFEB3B',
       lineWidth: 2,
       priceLineVisible: false,
+      crosshairMarkerVisible: false,
     });
     subChartsRef.current.adxSeries = adxLine;
 
@@ -1176,6 +1473,7 @@ export function TradingChart(): React.ReactElement {
       color: INDICATOR_COLORS.supertrendUp,
       lineWidth: 1,
       priceLineVisible: false,
+      crosshairMarkerVisible: false,
       visible: adx.showDI,
     });
     subChartsRef.current.plusDISeries = plusDI;
@@ -1185,6 +1483,7 @@ export function TradingChart(): React.ReactElement {
       color: INDICATOR_COLORS.supertrendDown,
       lineWidth: 1,
       priceLineVisible: false,
+      crosshairMarkerVisible: false,
       visible: adx.showDI,
     });
     subChartsRef.current.minusDISeries = minusDI;
@@ -1239,6 +1538,7 @@ export function TradingChart(): React.ReactElement {
       color: '#4CAF50',
       lineWidth: 1,
       priceLineVisible: false,
+      crosshairMarkerVisible: false,
     });
     subChartsRef.current.obvSeries = obvLine;
 
@@ -1299,13 +1599,14 @@ export function TradingChart(): React.ReactElement {
     }
   }, [volume.enabled, volume.showMA]);
 
-  // Update drawings (horizontal lines)
+  // Update drawings (horizontal lines, trend lines)
   useEffect(() => {
-    if (!candleSeriesRef.current) return;
+    if (!candleSeriesRef.current || !chartRef.current) return;
 
     const candleSeries = candleSeriesRef.current;
+    const chart = chartRef.current;
 
-    // Remove old lines
+    // Remove old horizontal lines
     horizontalLinesRef.current.forEach((line, id) => {
       if (!drawings.find((d) => d.id === id)) {
         candleSeries.removePriceLine(line);
@@ -1313,7 +1614,15 @@ export function TradingChart(): React.ReactElement {
       }
     });
 
-    // Add/update lines
+    // Remove old trend lines
+    trendLineSeriesRef.current.forEach((series, id) => {
+      if (!drawings.find((d) => d.id === id)) {
+        chart.removeSeries(series);
+        trendLineSeriesRef.current.delete(id);
+      }
+    });
+
+    // Add/update horizontal lines
     drawings
       .filter((d) => d.type === 'horizontalLine' && d.price !== undefined)
       .forEach((drawing) => {
@@ -1326,6 +1635,26 @@ export function TradingChart(): React.ReactElement {
             axisLabelVisible: true,
           });
           horizontalLinesRef.current.set(drawing.id, line);
+        }
+      });
+
+    // Add/update trend lines
+    drawings
+      .filter((d) => d.type === 'trendLine' && d.startTime && d.endTime && d.startPrice !== undefined && d.endPrice !== undefined)
+      .forEach((drawing) => {
+        if (!trendLineSeriesRef.current.has(drawing.id)) {
+          const trendSeries = chart.addSeries(LineSeries, {
+            color: drawing.color,
+            lineWidth: drawing.lineWidth as 1 | 2 | 3 | 4,
+            lastValueVisible: false,
+            priceLineVisible: false,
+            crosshairMarkerVisible: false,
+          });
+          trendSeries.setData([
+            { time: drawing.startTime as Time, value: drawing.startPrice! },
+            { time: drawing.endTime as Time, value: drawing.endPrice! },
+          ]);
+          trendLineSeriesRef.current.set(drawing.id, trendSeries);
         }
       });
   }, [drawings]);
@@ -1381,18 +1710,27 @@ export function TradingChart(): React.ReactElement {
 
   return (
     <div className="w-full h-full min-h-[600px] flex flex-col bg-card rounded-xl border shadow-sm relative">
-      {/* Controls */}
-      <ChartControls
+      {/* Left: Symbol/Interval + Active Indicators Legend */}
+      <ActiveIndicatorLegend
         symbol={symbol}
         interval={interval}
         onSymbolChange={setSymbol}
         onIntervalChange={setInterval}
+        crosshairData={crosshairData}
+      />
+
+      {/* Right: Controls (Drawing tools + Indicators button) */}
+      <ChartControls
         onOpenSettings={() => setSettingsOpen(true)}
+        onOpenDrawingTools={() => setDrawingToolsOpen(true)}
         activeDrawingTool={activeDrawingTool}
       />
 
       {/* Settings Panel */}
       <IndicatorSettingsPanel isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
+
+      {/* Drawing Tools Panel */}
+      <DrawingToolsPanel isOpen={drawingToolsOpen} onClose={() => setDrawingToolsOpen(false)} />
 
       {/* Loading overlay */}
       {loading && (
@@ -1421,97 +1759,128 @@ export function TradingChart(): React.ReactElement {
 
       {/* Chart panels */}
       <div className="flex-1 flex flex-col p-2 pt-14">
-        {/* Main chart */}
+        {/* Main chart - flex-1 to use remaining space */}
         <div
           ref={mainContainerRef}
-          className="w-full"
-          style={{ height: chartHeights.main }}
+          className="w-full flex-1 min-h-0"
         />
 
         {/* RSI chart */}
         {hasActiveRSI && (
-          <div className="border-t border-border/50 mt-1 pt-1">
-            <div className="text-xs text-muted-foreground mb-1 px-2">
-              RSI ({rsiConfigs.filter((r) => r.enabled).map((r) => r.period).join(', ')})
-            </div>
+          <div className="border-t border-border/50 mt-1 pt-1 relative flex-shrink-0" style={{ height: `${subPanelHeight}px` }}>
+            <SubPanelLegend
+              indicatorType="rsi"
+              label=""
+              lastValue={lastIndicatorValues}
+              config={{ rsiConfigs }}
+              onDoubleClick={() => {
+                const firstEnabled = rsiConfigs.find(r => r.enabled);
+                if (firstEnabled) {
+                  handleSubPanelEdit('rsi', firstEnabled.id, firstEnabled);
+                }
+              }}
+            />
             <div
               ref={rsiContainerRef}
-              className="w-full"
-              style={{ height: chartHeights.rsi, minHeight: '80px' }}
+              className="w-full h-full"
             />
           </div>
         )}
 
         {/* MACD chart */}
         {macd.enabled && (
-          <div className="border-t border-border/50 mt-1 pt-1">
-            <div className="text-xs text-muted-foreground mb-1 px-2">
-              MACD ({macd.fastPeriod}, {macd.slowPeriod}, {macd.signalPeriod})
-            </div>
+          <div className="border-t border-border/50 mt-1 pt-1 relative flex-shrink-0" style={{ height: `${subPanelHeight}px` }}>
+            <SubPanelLegend
+              indicatorType="macd"
+              label=""
+              lastValue={lastIndicatorValues}
+              config={{ macd }}
+              onDoubleClick={() => handleSubPanelEdit('macd', undefined, macd)}
+            />
             <div
               ref={macdContainerRef}
-              className="w-full"
-              style={{ height: chartHeights.macd, minHeight: '80px' }}
+              className="w-full h-full"
             />
           </div>
         )}
 
         {/* Stochastic chart */}
         {stochastic.enabled && (
-          <div className="border-t border-border/50 mt-1 pt-1">
-            <div className="text-xs text-muted-foreground mb-1 px-2">
-              Stochastic ({stochastic.kPeriod}, {stochastic.dPeriod}, {stochastic.smooth})
-            </div>
+          <div className="border-t border-border/50 mt-1 pt-1 relative flex-shrink-0" style={{ height: `${subPanelHeight}px` }}>
+            <SubPanelLegend
+              indicatorType="stochastic"
+              label=""
+              lastValue={lastIndicatorValues}
+              config={{ stochastic }}
+              onDoubleClick={() => handleSubPanelEdit('stochastic', undefined, stochastic)}
+            />
             <div
               ref={stochasticContainerRef}
-              className="w-full"
-              style={{ height: chartHeights.stochastic, minHeight: '80px' }}
+              className="w-full h-full"
             />
           </div>
         )}
 
         {/* ATR chart */}
         {atr.enabled && (
-          <div className="border-t border-border/50 mt-1 pt-1">
-            <div className="text-xs text-muted-foreground mb-1 px-2">
-              ATR ({atr.period})
-            </div>
+          <div className="border-t border-border/50 mt-1 pt-1 relative flex-shrink-0" style={{ height: `${subPanelHeight}px` }}>
+            <SubPanelLegend
+              indicatorType="atr"
+              label=""
+              lastValue={lastIndicatorValues}
+              config={{ atr }}
+              onDoubleClick={() => handleSubPanelEdit('atr', undefined, atr)}
+            />
             <div
               ref={atrContainerRef}
-              className="w-full"
-              style={{ height: chartHeights.atr, minHeight: '80px' }}
+              className="w-full h-full"
             />
           </div>
         )}
 
         {/* ADX chart */}
         {adx.enabled && (
-          <div className="border-t border-border/50 mt-1 pt-1">
-            <div className="text-xs text-muted-foreground mb-1 px-2">
-              ADX ({adx.period}) {adx.showDI && '+ DI'}
-            </div>
+          <div className="border-t border-border/50 mt-1 pt-1 relative flex-shrink-0" style={{ height: `${subPanelHeight}px` }}>
+            <SubPanelLegend
+              indicatorType="adx"
+              label=""
+              lastValue={lastIndicatorValues}
+              config={{ adx }}
+              onDoubleClick={() => handleSubPanelEdit('adx', undefined, adx)}
+            />
             <div
               ref={adxContainerRef}
-              className="w-full"
-              style={{ height: chartHeights.adx, minHeight: '80px' }}
+              className="w-full h-full"
             />
           </div>
         )}
 
         {/* OBV chart */}
         {obv.enabled && (
-          <div className="border-t border-border/50 mt-1 pt-1">
-            <div className="text-xs text-muted-foreground mb-1 px-2">
-              OBV (On-Balance Volume)
-            </div>
+          <div className="border-t border-border/50 mt-1 pt-1 relative flex-shrink-0" style={{ height: `${subPanelHeight}px` }}>
+            <SubPanelLegend
+              indicatorType="obv"
+              label=""
+              lastValue={lastIndicatorValues}
+            />
             <div
               ref={obvContainerRef}
-              className="w-full"
-              style={{ height: chartHeights.obv, minHeight: '80px' }}
+              className="w-full h-full"
             />
           </div>
         )}
       </div>
+
+      {/* Edit Modal for SubPanelLegend oscillators */}
+      <IndicatorEditModal
+        isOpen={subPanelEditModal.isOpen}
+        onClose={() => setSubPanelEditModal((prev) => ({ ...prev, isOpen: false }))}
+        indicatorType={subPanelEditModal.type}
+        indicatorId={subPanelEditModal.id}
+        currentConfig={subPanelEditModal.config}
+        onSave={handleSubPanelSave}
+        onDelete={subPanelEditModal.type === 'rsi' && subPanelEditModal.id ? handleSubPanelDelete : undefined}
+      />
     </div>
   );
 }

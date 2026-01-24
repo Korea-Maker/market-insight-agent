@@ -120,7 +120,23 @@ export interface EMARibbonConfig {
 }
 
 // Drawing tool types
-export type DrawingToolType = 'horizontalLine' | 'trendLine' | 'rectangle' | 'fibonacciRetracement';
+export type DrawingToolType =
+  // Lines
+  | 'horizontalLine'
+  | 'verticalLine'
+  | 'trendLine'
+  | 'ray'
+  | 'horizontalRay'
+  // Shapes
+  | 'rectangle'
+  | 'parallelChannel'
+  // Fibonacci
+  | 'fibonacciRetracement'
+  | 'fibonacciExtension'
+  // Annotations
+  | 'text'
+  | 'arrow'
+  | 'priceLabel';
 
 // Drawing object
 export interface DrawingObject {
