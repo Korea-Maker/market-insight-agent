@@ -14,13 +14,13 @@ import {
   LineSeries,
   CrosshairMode,
   MouseEventParams,
-  PriceLineOptions,
   LineStyle,
 } from 'lightweight-charts';
 import { usePriceStore } from '@/store/usePriceStore';
 import { useChartStore, TimeInterval, MovingAverageConfig } from '@/store/useChartStore';
 import { ChartControls } from './ChartControls';
 import { IndicatorSettingsPanel } from './IndicatorSettingsPanel';
+import { ActiveIndicatorLegend, CrosshairData } from './ActiveIndicatorLegend';
 import {
   calculateSMA,
   calculateEMA,
@@ -120,6 +120,7 @@ interface OverlaySeriesRefs {
 export function TradingChart(): React.ReactElement {
   // UI State
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [crosshairData, setCrosshairData] = useState<CrosshairData | null>(null);
 
   // Main chart refs
   const mainContainerRef = useRef<HTMLDivElement>(null);
@@ -319,6 +320,7 @@ export function TradingChart(): React.ReactElement {
           lineWidth: config.lineWidth as 1 | 2 | 3 | 4,
           priceLineVisible: false,
           lastValueVisible: false,
+          crosshairMarkerVisible: false,
           visible: config.enabled,
         });
 
@@ -373,6 +375,7 @@ export function TradingChart(): React.ReactElement {
           lineWidth: 1,
           priceLineVisible: false,
           lastValueVisible: false,
+          crosshairMarkerVisible: false,
         });
       }
       ichimokuRefs.current.tenkanSen.setData(ichimokuData.tenkanSen);
@@ -389,6 +392,7 @@ export function TradingChart(): React.ReactElement {
           lineWidth: 1,
           priceLineVisible: false,
           lastValueVisible: false,
+          crosshairMarkerVisible: false,
         });
       }
       ichimokuRefs.current.kijunSen.setData(ichimokuData.kijunSen);
@@ -405,6 +409,7 @@ export function TradingChart(): React.ReactElement {
           lineWidth: 1,
           priceLineVisible: false,
           lastValueVisible: false,
+          crosshairMarkerVisible: false,
         });
       }
       ichimokuRefs.current.senkouSpanA.setData(ichimokuData.senkouSpanA);
@@ -421,6 +426,7 @@ export function TradingChart(): React.ReactElement {
           lineWidth: 1,
           priceLineVisible: false,
           lastValueVisible: false,
+          crosshairMarkerVisible: false,
         });
       }
       ichimokuRefs.current.senkouSpanB.setData(ichimokuData.senkouSpanB);
@@ -437,6 +443,7 @@ export function TradingChart(): React.ReactElement {
           lineWidth: 1,
           priceLineVisible: false,
           lastValueVisible: false,
+          crosshairMarkerVisible: false,
         });
       }
       ichimokuRefs.current.chikouSpan.setData(ichimokuData.chikouSpan);
@@ -461,6 +468,7 @@ export function TradingChart(): React.ReactElement {
           lineWidth: 1,
           priceLineVisible: false,
           lastValueVisible: false,
+          crosshairMarkerVisible: false,
         });
       }
       overlaySeriesRef.current.bbUpper.setData(bbData.upper);
@@ -471,6 +479,7 @@ export function TradingChart(): React.ReactElement {
           lineWidth: 1,
           priceLineVisible: false,
           lastValueVisible: false,
+          crosshairMarkerVisible: false,
         });
       }
       overlaySeriesRef.current.bbMiddle.setData(bbData.middle);
@@ -481,6 +490,7 @@ export function TradingChart(): React.ReactElement {
           lineWidth: 1,
           priceLineVisible: false,
           lastValueVisible: false,
+          crosshairMarkerVisible: false,
         });
       }
       overlaySeriesRef.current.bbLower.setData(bbData.lower);
@@ -508,7 +518,8 @@ export function TradingChart(): React.ReactElement {
           color: INDICATOR_COLORS.vwap,
           lineWidth: 2,
           priceLineVisible: false,
-          lastValueVisible: true,
+          lastValueVisible: false,
+          crosshairMarkerVisible: false,
         });
       }
       overlaySeriesRef.current.vwapLine.setData(vwapData.vwap);
@@ -520,6 +531,7 @@ export function TradingChart(): React.ReactElement {
             lineWidth: 1,
             priceLineVisible: false,
             lastValueVisible: false,
+            crosshairMarkerVisible: false,
           });
         }
         overlaySeriesRef.current.vwapUpper.setData(vwapData.upperBand);
@@ -530,6 +542,7 @@ export function TradingChart(): React.ReactElement {
             lineWidth: 1,
             priceLineVisible: false,
             lastValueVisible: false,
+            crosshairMarkerVisible: false,
           });
         }
         overlaySeriesRef.current.vwapLower.setData(vwapData.lowerBand);
@@ -567,7 +580,8 @@ export function TradingChart(): React.ReactElement {
           color: INDICATOR_COLORS.supertrendUp,
           lineWidth: 2,
           priceLineVisible: false,
-          lastValueVisible: true,
+          lastValueVisible: false,
+          crosshairMarkerVisible: false,
         });
       }
 
@@ -605,6 +619,7 @@ export function TradingChart(): React.ReactElement {
             lineWidth: 1,
             priceLineVisible: false,
             lastValueVisible: false,
+            crosshairMarkerVisible: false,
           });
           overlaySeriesRef.current.emaRibbonSeries[idx] = series;
         }
@@ -848,6 +863,7 @@ export function TradingChart(): React.ReactElement {
       lineWidth: 1,
       priceLineVisible: false,
       lastValueVisible: false,
+      crosshairMarkerVisible: false,
       priceScaleId: 'volume',
     });
     volumeMASeriesRef.current = volumeMASeries;
@@ -869,6 +885,60 @@ export function TradingChart(): React.ReactElement {
           useChartStore.getState().setActiveDrawingTool(null);
         }
       }
+    });
+
+    // Crosshair move handler for indicator values
+    chart.subscribeCrosshairMove((param) => {
+      if (!param.time || !param.seriesData) {
+        setCrosshairData(null);
+        return;
+      }
+
+      const values: CrosshairData['values'] = {
+        ma: {},
+        rsi: {},
+      };
+
+      // Extract MA values
+      maSeriesRefs.current.forEach((ref) => {
+        const data = param.seriesData.get(ref.series);
+        if (data && 'value' in data && typeof data.value === 'number') {
+          values.ma[ref.id] = data.value;
+        }
+      });
+
+      // Extract overlay indicator values
+      if (overlaySeriesRef.current.bbMiddle) {
+        const upper = param.seriesData.get(overlaySeriesRef.current.bbUpper!);
+        const middle = param.seriesData.get(overlaySeriesRef.current.bbMiddle);
+        const lower = param.seriesData.get(overlaySeriesRef.current.bbLower!);
+        if (upper && middle && lower && 'value' in upper && 'value' in middle && 'value' in lower) {
+          values.bollingerBands = {
+            upper: upper.value as number,
+            middle: middle.value as number,
+            lower: lower.value as number,
+          };
+        }
+      }
+
+      if (overlaySeriesRef.current.vwapLine) {
+        const vwapData = param.seriesData.get(overlaySeriesRef.current.vwapLine);
+        if (vwapData && 'value' in vwapData) {
+          values.vwap = vwapData.value as number;
+        }
+      }
+
+      if (overlaySeriesRef.current.supertrendLine) {
+        const stData = param.seriesData.get(overlaySeriesRef.current.supertrendLine);
+        if (stData && 'value' in stData) {
+          values.supertrend = stData.value as number;
+        }
+      }
+
+      setCrosshairData({
+        time: param.time as number,
+        values,
+      });
     });
 
     // ResizeObserver
@@ -919,6 +989,7 @@ export function TradingChart(): React.ReactElement {
         color: config.color,
         lineWidth: 1,
         priceLineVisible: false,
+        crosshairMarkerVisible: false,
       });
 
       subChartsRef.current.rsiSeries.push({ id: config.id, series: rsiSeries });
@@ -988,6 +1059,7 @@ export function TradingChart(): React.ReactElement {
       color: INDICATOR_COLORS.macdLine,
       lineWidth: 1,
       priceLineVisible: false,
+      crosshairMarkerVisible: false,
     });
     subChartsRef.current.macdLine = macdLine;
 
@@ -996,6 +1068,7 @@ export function TradingChart(): React.ReactElement {
       color: INDICATOR_COLORS.macdSignal,
       lineWidth: 1,
       priceLineVisible: false,
+      crosshairMarkerVisible: false,
     });
     subChartsRef.current.macdSignal = signalLine;
 
@@ -1055,6 +1128,7 @@ export function TradingChart(): React.ReactElement {
       color: INDICATOR_COLORS.stochasticK,
       lineWidth: 1,
       priceLineVisible: false,
+      crosshairMarkerVisible: false,
     });
     subChartsRef.current.stochasticK = kLine;
 
@@ -1063,6 +1137,7 @@ export function TradingChart(): React.ReactElement {
       color: INDICATOR_COLORS.stochasticD,
       lineWidth: 1,
       priceLineVisible: false,
+      crosshairMarkerVisible: false,
     });
     subChartsRef.current.stochasticD = dLine;
 
@@ -1116,6 +1191,7 @@ export function TradingChart(): React.ReactElement {
       color: INDICATOR_COLORS.atr,
       lineWidth: 1,
       priceLineVisible: false,
+      crosshairMarkerVisible: false,
     });
     subChartsRef.current.atrSeries = atrLine;
 
@@ -1168,6 +1244,7 @@ export function TradingChart(): React.ReactElement {
       color: '#FFEB3B',
       lineWidth: 2,
       priceLineVisible: false,
+      crosshairMarkerVisible: false,
     });
     subChartsRef.current.adxSeries = adxLine;
 
@@ -1176,6 +1253,7 @@ export function TradingChart(): React.ReactElement {
       color: INDICATOR_COLORS.supertrendUp,
       lineWidth: 1,
       priceLineVisible: false,
+      crosshairMarkerVisible: false,
       visible: adx.showDI,
     });
     subChartsRef.current.plusDISeries = plusDI;
@@ -1185,6 +1263,7 @@ export function TradingChart(): React.ReactElement {
       color: INDICATOR_COLORS.supertrendDown,
       lineWidth: 1,
       priceLineVisible: false,
+      crosshairMarkerVisible: false,
       visible: adx.showDI,
     });
     subChartsRef.current.minusDISeries = minusDI;
@@ -1239,6 +1318,7 @@ export function TradingChart(): React.ReactElement {
       color: '#4CAF50',
       lineWidth: 1,
       priceLineVisible: false,
+      crosshairMarkerVisible: false,
     });
     subChartsRef.current.obvSeries = obvLine;
 
@@ -1381,12 +1461,17 @@ export function TradingChart(): React.ReactElement {
 
   return (
     <div className="w-full h-full min-h-[600px] flex flex-col bg-card rounded-xl border shadow-sm relative">
-      {/* Controls */}
-      <ChartControls
+      {/* Left: Symbol/Interval + Active Indicators Legend */}
+      <ActiveIndicatorLegend
         symbol={symbol}
         interval={interval}
         onSymbolChange={setSymbol}
         onIntervalChange={setInterval}
+        crosshairData={crosshairData}
+      />
+
+      {/* Right: Controls (Drawing tools + Indicators button) */}
+      <ChartControls
         onOpenSettings={() => setSettingsOpen(true)}
         activeDrawingTool={activeDrawingTool}
       />
