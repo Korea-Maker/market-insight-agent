@@ -93,6 +93,17 @@ class Settings(BaseSettings):
     ANALYSIS_PROMPT_VERSION: str = "v1_basic"  # v1_basic, v2_detailed, v3_expert
     ANALYSIS_DEFAULT_SYMBOL: str = "BTCUSDT"
 
+    # Sentiment Analysis 설정
+    SENTIMENT_MODEL: str = "ProsusAI/finbert"
+    SENTIMENT_BATCH_SIZE: int = 16
+    SENTIMENT_MIN_CONFIDENCE: float = 0.3
+    SENTIMENT_CACHE_TTL: int = 300  # 5분
+    SENTIMENT_USE_GPU: bool = True
+    SENTIMENT_DEVICE: str = "auto"  # "auto", "cuda", "cpu"
+    SENTIMENT_WORKER_ENABLED: bool = True
+    SENTIMENT_WORKER_INTERVAL: int = 60  # 초
+    SENTIMENT_SNAPSHOT_INTERVAL: int = 3600  # 1시간
+
     class Config:
         env_file = ".env"
         case_sensitive = True

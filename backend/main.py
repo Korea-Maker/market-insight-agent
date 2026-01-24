@@ -11,7 +11,7 @@ from contextlib import asynccontextmanager
 from app.core.config import settings
 from app.core.database import init_db, close_db
 from app.core.redis import REDIS_ENABLED
-from app.routers import ws, candles, news, auth, users, posts, comments, sources, analysis, symbols
+from app.routers import ws, candles, news, auth, users, posts, comments, sources, analysis, symbols, sentiment
 
 # 로깅 설정
 logging.basicConfig(
@@ -112,6 +112,18 @@ async def lifespan(app: FastAPI):
         f"(간격: {interval_minutes}분, 프롬프트: {prompt_version.value})"
     )
 
+    # 뉴스 감성 분석 워커 시작 (FinBERT 기반)
+    if settings.SENTIMENT_WORKER_ENABLED:
+        from app.services.sentiment.worker import run_sentiment_worker
+        sentiment_worker_task = asyncio.create_task(
+            run_sentiment_worker(
+                interval_seconds=settings.SENTIMENT_WORKER_INTERVAL,
+                snapshot_interval_seconds=settings.SENTIMENT_SNAPSHOT_INTERVAL,
+            )
+        )
+        background_tasks.append(("뉴스 감성 분석 워커", sentiment_worker_task))
+        logger.info("뉴스 감성 분석 워커 백그라운드 태스크 시작됨")
+
     yield
 
     # 종료 시 실행할 코드
@@ -159,6 +171,7 @@ app.include_router(news.router)
 app.include_router(sources.router)
 app.include_router(analysis.router)
 app.include_router(symbols.router)
+app.include_router(sentiment.router)
 
 # 커뮤니티 라우터
 app.include_router(auth.router)
