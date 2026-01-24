@@ -23,6 +23,7 @@ import { IndicatorSettingsPanel } from './IndicatorSettingsPanel';
 import { ActiveIndicatorLegend, CrosshairData } from './ActiveIndicatorLegend';
 import { SubPanelLegend } from './SubPanelLegend';
 import { DrawingToolsPanel } from './DrawingToolsPanel';
+import { IndicatorEditModal, EditableIndicatorType } from './IndicatorEditModal';
 import {
   calculateSMA,
   calculateEMA,
@@ -124,6 +125,14 @@ export function TradingChart(): React.ReactElement {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [drawingToolsOpen, setDrawingToolsOpen] = useState(false);
   const [crosshairData, setCrosshairData] = useState<CrosshairData | null>(null);
+
+  // Edit modal state for SubPanelLegend oscillators
+  const [subPanelEditModal, setSubPanelEditModal] = useState<{
+    isOpen: boolean;
+    type: EditableIndicatorType;
+    id?: string;
+    config: Record<string, unknown>;
+  }>({ isOpen: false, type: 'rsi', config: {} });
 
   // Pending drawing ref for multi-click tools (trendLine, rectangle, etc.)
   // Using ref instead of state to avoid stale closure issues in click handlers
@@ -236,6 +245,55 @@ export function TradingChart(): React.ReactElement {
   const setActiveDrawingTool = useChartStore((s) => s.setActiveDrawingTool);
   const updateLastIndicatorValues = useChartStore((s) => s.updateLastIndicatorValues);
   const lastIndicatorValues = useChartStore((s) => s.lastIndicatorValues);
+
+  // Store actions for editing indicators (used by SubPanelLegend edit modal)
+  const updateRSI = useChartStore((s) => s.updateRSI);
+  const removeRSI = useChartStore((s) => s.removeRSI);
+  const updateMACD = useChartStore((s) => s.updateMACD);
+  const updateStochastic = useChartStore((s) => s.updateStochastic);
+  const updateATR = useChartStore((s) => s.updateATR);
+  const updateADX = useChartStore((s) => s.updateADX);
+
+  // Handle edit from SubPanelLegend
+  const handleSubPanelEdit = useCallback((type: EditableIndicatorType, id?: string, config?: object) => {
+    setSubPanelEditModal({
+      isOpen: true,
+      type,
+      id,
+      config: (config || {}) as Record<string, unknown>,
+    });
+  }, []);
+
+  // Handle save from SubPanelLegend edit modal
+  const handleSubPanelSave = useCallback((config: Record<string, unknown>) => {
+    const { type, id } = subPanelEditModal;
+
+    switch (type) {
+      case 'rsi':
+        if (id) updateRSI(id, config);
+        break;
+      case 'macd':
+        updateMACD(config);
+        break;
+      case 'stochastic':
+        updateStochastic(config);
+        break;
+      case 'atr':
+        updateATR(config);
+        break;
+      case 'adx':
+        updateADX(config);
+        break;
+    }
+  }, [subPanelEditModal, updateRSI, updateMACD, updateStochastic, updateATR, updateADX]);
+
+  // Handle delete from SubPanelLegend edit modal (RSI only)
+  const handleSubPanelDelete = useCallback(() => {
+    const { type, id } = subPanelEditModal;
+    if (type === 'rsi' && id) {
+      removeRSI(id);
+    }
+  }, [subPanelEditModal, removeRSI]);
 
   // Memoize RSI enabled state to prevent unnecessary recalculations
   const hasActiveRSI = useMemo(() => showRSIPanel && rsiConfigs.some((r) => r.enabled), [showRSIPanel, rsiConfigs]);
@@ -1715,6 +1773,12 @@ export function TradingChart(): React.ReactElement {
               label=""
               lastValue={lastIndicatorValues}
               config={{ rsiConfigs }}
+              onDoubleClick={() => {
+                const firstEnabled = rsiConfigs.find(r => r.enabled);
+                if (firstEnabled) {
+                  handleSubPanelEdit('rsi', firstEnabled.id, firstEnabled);
+                }
+              }}
             />
             <div
               ref={rsiContainerRef}
@@ -1731,6 +1795,7 @@ export function TradingChart(): React.ReactElement {
               label=""
               lastValue={lastIndicatorValues}
               config={{ macd }}
+              onDoubleClick={() => handleSubPanelEdit('macd', undefined, macd)}
             />
             <div
               ref={macdContainerRef}
@@ -1747,6 +1812,7 @@ export function TradingChart(): React.ReactElement {
               label=""
               lastValue={lastIndicatorValues}
               config={{ stochastic }}
+              onDoubleClick={() => handleSubPanelEdit('stochastic', undefined, stochastic)}
             />
             <div
               ref={stochasticContainerRef}
@@ -1763,6 +1829,7 @@ export function TradingChart(): React.ReactElement {
               label=""
               lastValue={lastIndicatorValues}
               config={{ atr }}
+              onDoubleClick={() => handleSubPanelEdit('atr', undefined, atr)}
             />
             <div
               ref={atrContainerRef}
@@ -1779,6 +1846,7 @@ export function TradingChart(): React.ReactElement {
               label=""
               lastValue={lastIndicatorValues}
               config={{ adx }}
+              onDoubleClick={() => handleSubPanelEdit('adx', undefined, adx)}
             />
             <div
               ref={adxContainerRef}
@@ -1802,6 +1870,17 @@ export function TradingChart(): React.ReactElement {
           </div>
         )}
       </div>
+
+      {/* Edit Modal for SubPanelLegend oscillators */}
+      <IndicatorEditModal
+        isOpen={subPanelEditModal.isOpen}
+        onClose={() => setSubPanelEditModal((prev) => ({ ...prev, isOpen: false }))}
+        indicatorType={subPanelEditModal.type}
+        indicatorId={subPanelEditModal.id}
+        currentConfig={subPanelEditModal.config}
+        onSave={handleSubPanelSave}
+        onDelete={subPanelEditModal.type === 'rsi' && subPanelEditModal.id ? handleSubPanelDelete : undefined}
+      />
     </div>
   );
 }
