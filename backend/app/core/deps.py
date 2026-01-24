@@ -92,3 +92,52 @@ async def get_current_verified_user(
             detail="이메일 인증이 필요합니다",
         )
     return current_user
+
+
+async def get_current_active_user(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """
+    활성 상태이고 차단/정지되지 않은 사용자만 허용
+    """
+    if current_user.status == 'banned':
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="계정이 차단되었습니다",
+        )
+    if current_user.status == 'suspended':
+        from datetime import datetime
+        if current_user.suspended_until and current_user.suspended_until > datetime.utcnow():
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"계정이 정지되었습니다. 해제 시간: {current_user.suspended_until}",
+            )
+    return current_user
+
+
+async def get_current_moderator(
+    current_user: User = Depends(get_current_active_user),
+) -> User:
+    """
+    모더레이터 이상 권한 필요
+    """
+    if current_user.role not in ('moderator', 'admin'):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="관리자 권한이 필요합니다",
+        )
+    return current_user
+
+
+async def get_current_admin(
+    current_user: User = Depends(get_current_active_user),
+) -> User:
+    """
+    관리자 권한 필요
+    """
+    if current_user.role != 'admin':
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="관리자 권한이 필요합니다",
+        )
+    return current_user

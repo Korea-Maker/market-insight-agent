@@ -7,3 +7,4 @@ export * from './comment';
 export * from './post';
 export * from './price';
 export * from './notification';
+export * from './moderation';
