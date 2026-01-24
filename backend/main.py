@@ -11,7 +11,7 @@ from contextlib import asynccontextmanager
 from app.core.config import settings
 from app.core.database import init_db, close_db
 from app.core.redis import REDIS_ENABLED
-from app.routers import ws, candles, news, auth, users, posts, comments, sources, analysis
+from app.routers import ws, candles, news, auth, users, posts, comments, sources, analysis, symbols
 
 # 로깅 설정
 logging.basicConfig(
@@ -56,10 +56,11 @@ async def lifespan(app: FastAPI):
     if REDIS_ENABLED:
         redis_available = await check_redis_connection()
         if redis_available:
-            from app.services.ingestor import run_ingestor
-            ingestor_task = asyncio.create_task(run_ingestor())
-            background_tasks.append(("Binance 데이터 수집기", ingestor_task))
-            logger.info("Binance 데이터 수집기 백그라운드 태스크 시작됨")
+            # 다중 심볼 수집기 사용
+            from app.services.multi_ingestor import run_multi_ingestor
+            ingestor_task = asyncio.create_task(run_multi_ingestor())
+            background_tasks.append(("다중 심볼 데이터 수집기", ingestor_task))
+            logger.info("다중 심볼 데이터 수집기 백그라운드 태스크 시작됨")
         else:
             logger.warning("Redis 비활성화 - 실시간 가격 스트리밍 사용 불가")
     else:
@@ -128,6 +129,7 @@ app.include_router(candles.router)
 app.include_router(news.router)
 app.include_router(sources.router)
 app.include_router(analysis.router)
+app.include_router(symbols.router)
 
 # 커뮤니티 라우터
 app.include_router(auth.router)

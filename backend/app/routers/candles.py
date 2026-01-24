@@ -1,10 +1,12 @@
 """
 캔들 데이터 API 라우터
 Binance API를 통해 과거 OHLC 데이터를 제공
+다중 심볼 일괄 조회 지원
 """
+import asyncio
 import logging
 import json
-from typing import Optional
+from typing import Optional, Dict, List
 from fastapi import APIRouter, HTTPException, Query, Depends
 from pydantic import BaseModel
 import httpx
@@ -201,3 +203,107 @@ async def get_candles(
     logger.info(f"캔들 데이터 반환: {len(candles)}개 ({symbol}, {interval})")
 
     return response
+
+
+class BatchCandlesResponse(BaseModel):
+    """다중 심볼 캔들 데이터 응답 모델"""
+    data: Dict[str, CandlesResponse]
+
+
+@router.get("/candles/batch", response_model=BatchCandlesResponse)
+async def get_batch_candles(
+    symbols: str = Query(..., description="쉼표로 구분된 심볼 목록 (예: BTCUSDT,ETHUSDT)"),
+    interval: str = Query(
+        default="1m",
+        description="시간 간격 (1m, 5m, 15m, 1h, 4h, 1d 등)",
+        pattern="^(1m|3m|5m|15m|30m|1h|2h|4h|6h|8h|12h|1d|3d|1w|1M)$",
+    ),
+    limit: int = Query(default=100, ge=1, le=500, description="심볼당 캔들 수 (최대 500)"),
+    redis: Optional[Redis] = Depends(get_redis_client),
+):
+    """
+    다중 심볼 캔들 데이터 일괄 조회
+
+    여러 심볼의 캔들 데이터를 동시에 가져옵니다.
+    병렬 요청으로 효율적인 데이터 수집을 제공합니다.
+
+    Args:
+        symbols: 쉼표로 구분된 심볼 목록 (예: BTCUSDT,ETHUSDT)
+        interval: 시간 간격 (기본값: 1m)
+        limit: 심볼당 캔들 수 (기본값: 100, 최대: 500)
+        redis: Redis 클라이언트 (자동 주입)
+
+    Returns:
+        심볼별 캔들 데이터 딕셔너리
+    """
+    # 심볼 목록 파싱
+    symbol_list = [s.strip().upper() for s in symbols.split(",") if s.strip()]
+
+    if not symbol_list:
+        raise HTTPException(
+            status_code=400,
+            detail="최소 하나의 심볼이 필요합니다"
+        )
+
+    if len(symbol_list) > 10:
+        raise HTTPException(
+            status_code=400,
+            detail="한 번에 최대 10개 심볼만 조회할 수 있습니다"
+        )
+
+    async def fetch_symbol_candles(symbol: str) -> tuple[str, CandlesResponse]:
+        """개별 심볼 캔들 데이터 가져오기"""
+        # 캐시 체크
+        cache_key = f"candles:{symbol}:{interval}:{limit}"
+
+        if redis:
+            try:
+                cached_data = await redis.get(cache_key)
+                if cached_data:
+                    logger.debug(f"배치 캔들 캐시 히트: {cache_key}")
+                    response_data = json.loads(cached_data)
+                    return symbol, CandlesResponse(**response_data)
+            except Exception as e:
+                logger.warning(f"Redis 캐시 조회 실패: {e}")
+
+        # Binance API 호출
+        binance_candles = await fetch_binance_candles(
+            symbol=symbol,
+            interval=interval,
+            limit=limit,
+        )
+
+        candles = [parse_binance_candle(candle) for candle in binance_candles]
+
+        response = CandlesResponse(
+            symbol=symbol,
+            interval=interval,
+            candles=candles,
+        )
+
+        # 캐시 저장
+        if redis:
+            try:
+                cache_data = response.model_dump_json()
+                await redis.setex(cache_key, 60, cache_data)
+            except Exception as e:
+                logger.warning(f"Redis 캐시 저장 실패: {e}")
+
+        return symbol, response
+
+    # 병렬로 모든 심볼 데이터 가져오기
+    tasks = [fetch_symbol_candles(symbol) for symbol in symbol_list]
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+
+    # 결과 취합
+    data: Dict[str, CandlesResponse] = {}
+    for result in results:
+        if isinstance(result, Exception):
+            logger.error(f"심볼 캔들 데이터 가져오기 실패: {result}")
+            continue
+        symbol, candles_response = result
+        data[symbol] = candles_response
+
+    logger.info(f"배치 캔들 데이터 반환: {len(data)}개 심볼")
+
+    return BatchCandlesResponse(data=data)

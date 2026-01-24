@@ -15,6 +15,17 @@ class Settings(BaseSettings):
     API_PORT: int = 8000
     ENVIRONMENT: str = "development"
 
+    # Multi-symbol settings
+    DEFAULT_SYMBOLS: List[str] = ["BTCUSDT", "ETHUSDT", "BNBUSDT"]
+    MAX_SYMBOLS_PER_CLIENT: int = 20
+    MAX_TOTAL_SYMBOLS: int = 50
+    SYMBOL_HISTORY_LIMIT: int = 1000
+    REDIS_CHANNEL_PREFIX: str = "prices"
+
+    # Binance settings
+    BINANCE_WS_BASE: str = "wss://stream.binance.com:9443"
+    BINANCE_STREAM_TYPE: str = "trade"
+
     # CORS 설정
     CORS_ORIGINS: List[str] = [
         "http://localhost:3000",
