@@ -11,7 +11,7 @@ class UserBase(BaseModel):
     """사용자 기본 스키마"""
     email: EmailStr
     username: str = Field(..., min_length=3, max_length=50)
-    display_name: str = Field(..., min_length=1, max_length=100)
+    display_name: Optional[str] = Field(None, min_length=1, max_length=100)
 
     @field_validator('username')
     @classmethod

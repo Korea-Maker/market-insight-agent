@@ -83,10 +83,13 @@ class AuthService:
         """
         password_hash = get_password_hash(user_data.password)
 
+        # display_name이 없으면 username 사용
+        display_name = user_data.display_name or user_data.username
+
         user = User(
             email=user_data.email,
             username=user_data.username.lower(),
-            display_name=user_data.display_name,
+            display_name=display_name,
             password_hash=password_hash,
             is_active=True,
             is_verified=False,  # 이메일 인증 필요
