@@ -26,12 +26,12 @@ class Settings(BaseSettings):
     BINANCE_WS_BASE: str = "wss://stream.binance.com:9443"
     BINANCE_STREAM_TYPE: str = "trade"
 
-    # CORS 설정
+    # CORS 설정 (allow_credentials=True와 함께 사용 시 "*" 사용 불가)
     CORS_ORIGINS: List[str] = [
         "http://localhost:3000",
         "http://localhost:3001",
         "http://127.0.0.1:3000",
-        "*",
+        "http://127.0.0.1:3001",
     ]
 
     # 데이터베이스 설정
