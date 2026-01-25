@@ -935,6 +935,13 @@ export function TradingChart(): React.ReactElement {
         currentCandleTimeRef.current = lastCandle.time as number;
       }
 
+      // Guard: Check if chart is still mounted before updating
+      // This prevents "Object is disposed" errors when component unmounts during async fetch
+      if (!chartRef.current) {
+        setLoading(false);
+        return candles;
+      }
+
       // Update main series
       if (candleSeriesRef.current) {
         candleSeriesRef.current.setData(candles);
@@ -956,7 +963,7 @@ export function TradingChart(): React.ReactElement {
         }
       }
 
-      // Fit content
+      // Fit content - only if chart still exists
       chartRef.current?.timeScale().fitContent();
       subChartsRef.current.rsiChart?.timeScale().fitContent();
       subChartsRef.current.macdChart?.timeScale().fitContent();
@@ -1177,6 +1184,8 @@ export function TradingChart(): React.ReactElement {
     });
 
     return () => {
+      // Set chartRef to null FIRST to signal ongoing async operations to abort
+      chartRef.current = null;
       resizeObserver.disconnect();
       chart.remove();
       maSeriesRefs.current = [];

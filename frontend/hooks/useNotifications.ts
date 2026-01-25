@@ -4,8 +4,8 @@
  */
 'use client';
 
-import { useEffect, useRef, useCallback } from 'react';
-import { useNotificationStore } from '@/store/useNotificationStore';
+import { useEffect, useRef, useCallback, useMemo } from 'react';
+import { useNotificationStore, selectWsStatus } from '@/store/useNotificationStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import type { WebSocketNotification, Notification } from '@/types/notification';
 
@@ -64,6 +64,12 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
   const reconnectAttemptsRef = useRef(0);
   const shouldReconnectRef = useRef(reconnect);
   const isManualCloseRef = useRef(false);
+  const onNotificationRef = useRef(onNotification);
+
+  // Update callback ref when it changes
+  useEffect(() => {
+    onNotificationRef.current = onNotification;
+  }, [onNotification]);
 
   // Auth store에서 토큰 가져오기
   const token = useAuthStore((state) => state.accessToken);
@@ -148,9 +154,9 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
 
               useNotificationStore.getState().addNotification(notification);
 
-              // 콜백 호출
-              if (onNotification) {
-                onNotification(notification);
+              // 콜백 호출 (ref 사용으로 무한 루프 방지)
+              if (onNotificationRef.current) {
+                onNotificationRef.current(notification);
               }
               break;
 
@@ -192,7 +198,8 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
         attemptReconnect();
       }
     }
-  }, [token, isAuthenticated, onNotification]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, isAuthenticated]);
 
   /**
    * Attempt to reconnect with exponential backoff
@@ -268,31 +275,46 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
     console.log('[NotificationWS] Manually disconnected');
   }, [stopHeartbeat]);
 
+  // Store functions in refs to avoid useEffect dependency issues
+  const connectRef = useRef(connect);
+  const disconnectRef = useRef(disconnect);
+
+  useEffect(() => {
+    connectRef.current = connect;
+    disconnectRef.current = disconnect;
+  }, [connect, disconnect]);
+
   // Connect on mount when authenticated
   useEffect(() => {
     if (enabled && isAuthenticated && token) {
       isManualCloseRef.current = false;
       shouldReconnectRef.current = reconnect;
-      connect();
+      connectRef.current();
     }
 
     return () => {
-      disconnect();
+      disconnectRef.current();
     };
-  }, [enabled, isAuthenticated, token, connect, disconnect, reconnect]);
+  }, [enabled, isAuthenticated, token, reconnect]);
 
   // 로그아웃 시 연결 해제
   useEffect(() => {
     if (!isAuthenticated) {
-      disconnect();
+      disconnectRef.current();
       useNotificationStore.getState().reset();
     }
-  }, [isAuthenticated, disconnect]);
+  }, [isAuthenticated]);
 
-  return {
-    connect,
-    disconnect,
-    isConnected: useNotificationStore((state) => state.wsStatus === 'connected'),
-    wsStatus: useNotificationStore((state) => state.wsStatus),
-  };
+  // Store 구독은 별도로 - 무한 루프 방지를 위해 useMemo 사용
+  const wsStatus = useNotificationStore(selectWsStatus);
+
+  return useMemo(
+    () => ({
+      connect,
+      disconnect,
+      isConnected: wsStatus === 'connected',
+      wsStatus,
+    }),
+    [connect, disconnect, wsStatus]
+  );
 }

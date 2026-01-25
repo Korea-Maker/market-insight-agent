@@ -3,7 +3,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Bell } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useNotificationStore } from '@/store/useNotificationStore';
+import {
+  useNotificationStore,
+  selectUnreadCount,
+  selectWsStatus,
+} from '@/store/useNotificationStore';
 import { useNotifications } from '@/hooks/useNotifications';
 import { notificationsApi } from '@/lib/api/notifications';
 import { NotificationDropdown } from './NotificationDropdown';
@@ -20,11 +24,10 @@ export function NotificationBell({ className }: NotificationBellProps) {
   const bellRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const { unreadCount, setUnreadCount, wsStatus } = useNotificationStore((state) => ({
-    unreadCount: state.unreadCount,
-    setUnreadCount: state.setUnreadCount,
-    wsStatus: state.wsStatus,
-  }));
+  // Use individual selectors to avoid infinite loop from object reference changes
+  const unreadCount = useNotificationStore(selectUnreadCount);
+  const wsStatus = useNotificationStore(selectWsStatus);
+  const setUnreadCount = useNotificationStore((state) => state.setUnreadCount);
 
   // 새 알림 수신 시 토스트 표시
   const handleNotification = useCallback((notification: Notification) => {
